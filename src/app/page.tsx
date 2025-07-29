@@ -1,6 +1,6 @@
 import Sidebar from "@/components/Sidebar";
 import PrismPrompt from "@/components/PrismPrompt";
-import TokenCard from "@/components/TokenCard";
+import TokenRow from "@/components/TokenRow";
 import TrendingCrawl from "@/components/TrendingCrawl";
 
 export default function Home() {
@@ -35,21 +35,21 @@ export default function Home() {
               <section className="flex-shrink-0">
                 <h2 className="text-sm text-gray-400 uppercase tracking-widest mb-8 font-medium">Suggested Tokens</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                  <TokenCard
+                  <TokenRow
                     name="MAP"
                     change="+13.2%"
                     holders="227"
                     volume="$384K"
                     tags={["New Deploy", "Smart Money"]}
                   />
-                  <TokenCard
+                  <TokenRow
                     name="WOOF"
                     change="+9.8%"
                     holders="112"
                     volume="$220K"
                     tags={["Low Cap", "Trending"]}
                   />
-                  <TokenCard
+                  <TokenRow
                     name="MARS"
                     change="+17.3%"
                     holders="340"
@@ -59,8 +59,8 @@ export default function Home() {
                 </div>
               </section>
             </div>
-          </div>
-        </main>
+        </div>
+      </main>
       </div>
     </div>
   );
