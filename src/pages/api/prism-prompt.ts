@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { handlePrompt, TokenRecommendation } from "@/lib/aiHandler";
+import { handlePrompt } from "@/lib/aiHandler";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: "Prompt is required and must be a string" });
     }
 
-    const tokens: TokenRecommendation[] = await handlePrompt(prompt);
+    const tokens = await handlePrompt(prompt);
     
     res.status(200).json({ tokens });
   } catch (err) {
