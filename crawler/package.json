@@ -1,0 +1,23 @@
+{
+  "name": "solana-token-crawler",
+  "version": "1.0.0",
+  "description": "Solana token crawler for Prism AI",
+  "main": "index.ts",
+  "scripts": {
+    "start": "tsx index.ts",
+    "dev": "tsx watch index.ts",
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": ["solana", "tokens", "crawler", "ai"],
+  "author": "",
+  "license": "MIT"
+} 
