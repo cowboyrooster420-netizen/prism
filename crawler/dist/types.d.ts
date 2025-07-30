@@ -39,6 +39,8 @@ export interface HeliusToken {
     amount: string;
     decimals: number;
     owner: string;
+    name?: string;
+    symbol?: string;
 }
 export interface TokenFilter {
     column: string;

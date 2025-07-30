@@ -10,7 +10,7 @@ const config_1 = require("../config");
 const supabase = (0, supabase_js_1.createClient)(config_1.SUPABASE_URL, config_1.SUPABASE_KEY);
 async function upsertToken(token) {
     try {
-        // Prepare the token data for Supabase
+        // Prepare the token data for Supabase - only include fields that exist in the database
         const tokenData = {
             mint_address: token.mint_address,
             name: token.name,
@@ -25,12 +25,8 @@ async function upsertToken(token) {
             price: token.price,
             price_change_1h: token.price_change_1h,
             price_change_24h: token.price_change_24h,
-            ai_score: token.aiScore,
-            updated_at: token.updatedAt,
-            // Add additional fields if your table supports them
-            market_metrics: token.marketMetrics,
-            social_metrics: token.socialMetrics,
-            technical_metrics: token.technicalMetrics,
+            created_at: token.created_at,
+            updated_at: token.updated_at,
         };
         const { error } = await supabase
             .from('tokens')

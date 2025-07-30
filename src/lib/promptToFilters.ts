@@ -18,9 +18,14 @@ export async function promptToFilters(prompt: string) {
 You are an assistant that converts user prompts into structured filters.
 Output must be an array of filter objects with: column, operator, value.
 
-Supported fields: name, symbol, market_cap, volume_1h, holder_growth_1h, whale_buys_1h, liquidity_usd
+Supported fields: name, symbol, market_cap, volume_24h, price_change_24h, liquidity, price
 
 Supported operators: eq, lt, lte, gt, gte, like
+
+IMPORTANT: All numeric values must be actual numbers, not text like "high" or "low".
+- For "high volume" use a large number like 1000000
+- For "low market cap" use a small number like 1000000
+- For "under $10M" use 10000000
 
 Respond ONLY with a JSON array. No other text.
 `

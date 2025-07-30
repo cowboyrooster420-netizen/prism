@@ -1,8 +1,7 @@
-import { fetchRecentTokens } from './services/helius';
-import { filterTokens } from './services/filters';
-import { enrichToken } from './services/enrich';
+import { getTopBirdEyeTokens, getTrendingBirdEyeTokens } from './services/birdeye';
+import { getHeliusMetadata } from './services/helius';
 import { upsertToken } from './services/supabase';
-import { sleep } from './utils/sleep';
+import { sleep } from './utils';
 import { CRAWL_INTERVAL_MS } from './config';
 
 let isRunning = true;
@@ -22,48 +21,68 @@ process.on('SIGTERM', () => {
 
 async function crawl() {
   if (!isRunning) return;
+  console.log('\n=== Starting BirdEye-based crawl ===');
+
+  // Fetch top tokens first, then trending tokens with delay to avoid rate limits
+  console.log('🔄 Fetching top tokens...');
+  const topTokens = await getTopBirdEyeTokens();
+  await sleep(2000); // Wait 2 seconds between API calls
   
-  try {
-    console.log('\n=== Starting crawl... ===');
-    const startTime = Date.now();
-    
-    // Fetch tokens from Helius
-    const tokens = await fetchRecentTokens();
-    console.log(`Fetched ${tokens.length} tokens from Helius`);
-    
-    // Filter tokens
-    const filtered = filterTokens(tokens);
-    console.log(`Filtered to ${filtered.length} quality tokens`);
-    
-    // Enrich and store tokens
-    let enrichedCount = 0;
-    for (const token of filtered) {
-      if (!isRunning) break;
-      
-      const enriched = await enrichToken(token);
-      if (enriched) {
-        const success = await upsertToken(enriched as any); // Type assertion for now
-        if (success) {
-          enrichedCount++;
-        }
-      }
-      
-      // Small delay between tokens to avoid overwhelming APIs
-      await sleep(100);
+  console.log('🔄 Fetching trending tokens...');
+  const trendingTokens = await getTrendingBirdEyeTokens();
+
+  // Combine and deduplicate tokens by address
+  const allTokens = [...topTokens, ...trendingTokens];
+  const uniqueTokens = allTokens.filter((token, index, self) => 
+    index === self.findIndex(t => t.address === token.address)
+  );
+
+  console.log(`📊 Fetched ${topTokens.length} top tokens + ${trendingTokens.length} trending tokens = ${uniqueTokens.length} unique tokens`);
+
+  const enrichedTokens = [];
+  for (const token of uniqueTokens) {
+    const {
+      address,
+      name,
+      symbol,
+      price,
+      v24hChangePercent,
+      v24hUSD,
+      mc,
+      liquidity,
+    } = token;
+
+    let finalName = name;
+    let finalSymbol = symbol;
+
+    if (!name || !symbol || name.startsWith('token-')) {
+      const heliusMeta = await getHeliusMetadata(address);
+      finalName = heliusMeta?.name || finalName;
+      finalSymbol = heliusMeta?.symbol || finalSymbol;
     }
-    
-    const endTime = Date.now();
-    const duration = (endTime - startTime) / 1000;
-    
-    console.log(`=== Crawl completed in ${duration.toFixed(2)}s ===`);
-    console.log(`- Fetched: ${tokens.length} tokens`);
-    console.log(`- Filtered: ${filtered.length} tokens`);
-    console.log(`- Stored: ${enrichedCount} tokens`);
-    console.log(`Sleeping ${CRAWL_INTERVAL_MS / 1000}s until next crawl...`);
-    
-  } catch (error) {
-    console.error('Crawl failed:', error);
+
+    enrichedTokens.push({
+      mint_address: address,
+      name: finalName,
+      symbol: finalSymbol,
+      price,
+      price_change_24h: v24hChangePercent,
+      volume_24h: v24hUSD,
+      market_cap: mc,
+      liquidity,
+      updated_at: new Date().toISOString(),
+    } as any);
+
+    // Respect BirdEye rate limits
+    await sleep(200); // Optional fine-tuning
   }
+
+  // Upsert into Supabase
+  for (const token of enrichedTokens) {
+    await upsertToken(token); // use your existing upsertToken()
+  }
+
+  console.log(`✅ Enriched and upserted ${enrichedTokens.length} tokens.`);
   
   // Schedule next crawl
   if (isRunning) {
@@ -73,7 +92,7 @@ async function crawl() {
 }
 
 // Start the crawler
-console.log('🚀 Starting Solana Token Crawler...');
+console.log('🚀 Starting Solana Token Crawler with BirdEye...');
 console.log(`Crawl interval: ${CRAWL_INTERVAL_MS / 1000} seconds`);
 console.log('Press Ctrl+C to stop');
 

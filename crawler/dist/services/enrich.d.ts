@@ -1,3 +1,3 @@
-import { Token, EnrichedToken } from '../types';
-export declare function enrichToken(token: Token): Promise<EnrichedToken | null>;
+import { Token } from '../types';
+export declare function enrichToken(token: Token): Promise<Token | null>;
 //# sourceMappingURL=enrich.d.ts.map
