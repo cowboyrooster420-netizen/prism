@@ -1,24 +1,19 @@
 import { Token, EnrichedToken } from '../types';
 import { sleep } from '../utils/sleep';
 
-export async function enrichToken(token: Token): Promise<EnrichedToken | null> {
+export async function enrichToken(token: Token): Promise<Token | null> {
   try {
-    const enriched: EnrichedToken = {
+    // Calculate AI score but don't include it in the returned token
+    // since it's not in the database schema
+    const aiScore = await calculateAIScore(token);
+    
+    // Return only the base token fields that exist in the database
+    const enriched: Token = {
       ...token,
-      aiScore: await calculateAIScore(token),
-      updatedAt: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
-    // Add market metrics
-    enriched.marketMetrics = await getMarketMetrics(token.mint_address);
-    
-    // Add social metrics (if available)
-    enriched.socialMetrics = await getSocialMetrics(token.symbol);
-    
-    // Add technical indicators
-    enriched.technicalMetrics = await getTechnicalMetrics(token.mint_address);
-
-    console.log(`Enriched token: ${token.name} (${token.symbol}) - AI Score: ${enriched.aiScore.toFixed(2)}`);
+    console.log(`Enriched token: ${token.name} (${token.symbol}) - AI Score: ${aiScore.toFixed(2)}`);
     return enriched;
   } catch (error) {
     console.error(`Failed to enrich token ${token.mint_address}:`, error);

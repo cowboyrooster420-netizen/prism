@@ -42,7 +42,7 @@ async function crawl() {
       
       const enriched = await enrichToken(token);
       if (enriched) {
-        const success = await upsertToken(enriched);
+        const success = await upsertToken(enriched as any); // Type assertion for now
         if (success) {
           enrichedCount++;
         }

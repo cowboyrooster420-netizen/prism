@@ -44,6 +44,8 @@ export interface HeliusToken {
   amount: string;
   decimals: number;
   owner: string;
+  name?: string;
+  symbol?: string;
   // Add other Helius-specific fields as needed
 }
 

@@ -35,7 +35,12 @@ Respond ONLY with a JSON array. No other text.
   })
 
   try {
-    const json = JSON.parse(response.choices[0].message.content || '')
+    let content = response.choices[0].message.content || ''
+    
+    // Remove markdown code blocks if present
+    content = content.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim()
+    
+    const json = JSON.parse(content)
     return FilterSchema.parse(json)
   } catch (err) {
     console.error('Invalid AI output:', err)
