@@ -9,6 +9,8 @@ export interface Token {
   holder_count?: number;
   holder_growth_1h?: number;
   whale_buys_1h?: number;
+  tx_count_last_24h?: number;
+  description?: string;
   liquidity?: number;
   price?: number;
   price_change_1h?: number;

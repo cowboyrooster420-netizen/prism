@@ -1,17 +1,22 @@
 {
   "name": "solana-token-crawler",
   "version": "1.0.0",
+  "type": "module",
   "description": "Solana token crawler for Prism AI",
   "main": "index.ts",
   "scripts": {
     "start": "tsx index.ts",
     "dev": "tsx watch index.ts",
+    "enrich": "tsx helius-enrichment.ts",
+    "enrich-moralis": "tsx moralis-enrichment.ts",
+    "markets": "tsx birdeye-markets-crawler.ts",
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
-    "dotenv": "^17.2.1"
+    "dotenv": "^17.2.1",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
