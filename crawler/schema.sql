@@ -12,11 +12,20 @@ DROP FUNCTION IF EXISTS refresh_trending_tokens() CASCADE;
 DROP FUNCTION IF EXISTS search_tokens() CASCADE;
 DROP FUNCTION IF EXISTS get_token_stats() CASCADE;
 
--- Create a custom URL validation function
+-- Create a custom URL validation function that handles various URL formats
 CREATE OR REPLACE FUNCTION extensions.validate_url(url TEXT)
 RETURNS BOOLEAN AS $$
 BEGIN
-    RETURN url ~ '^https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(/[a-zA-Z0-9.-]*)*$';
+    -- Allow NULL/empty URLs
+    IF url IS NULL OR url = '' THEN
+        RETURN TRUE;
+    END IF;
+    
+    -- Allow various URL formats including IPFS, Arweave, CDN, and standard URLs
+    RETURN url ~ '^https?://[a-zA-Z0-9.-]+(\.[a-zA-Z]{2,})*(:[0-9]+)?(/[a-zA-Z0-9._~:/?#[\]@!$&''()*+,;=%\-]*)*$' OR
+           url ~ '^ipfs://[a-zA-Z0-9]+(/[a-zA-Z0-9._~:/?#[\]@!$&''()*+,;=%\-]*)*$' OR
+           url ~ '^ar://[a-zA-Z0-9]+(/[a-zA-Z0-9._~:/?#[\]@!$&''()*+,;=%\-]*)*$' OR
+           url ~ '^data:image/[a-zA-Z]+;base64,[a-zA-Z0-9+/=]*$';
 END;
 $$ LANGUAGE plpgsql;
 
@@ -30,7 +39,7 @@ CREATE TABLE tokens (
     name VARCHAR(100) NOT NULL 
         CHECK (length(name) BETWEEN 2 AND 100),
     symbol VARCHAR(20) NOT NULL 
-        CHECK (symbol ~ '^[A-Z0-9]{2,20}$'),
+        CHECK (symbol ~ '^[A-Z0-9$]{2,20}$'),
 
     -- Price and market data
     price NUMERIC(30, 15) DEFAULT 0 
