@@ -127,7 +127,7 @@ class SmartTokenCrawler {
 
       if (!response.ok) throw new Error(`Birdeye API error: ${response.status}`);
       
-      const data = await response.json();
+      const data = await response.json() as any;
       return data.data?.tokens?.map((token: any) => ({
         address: token.address,
         name: token.name,
@@ -154,7 +154,7 @@ class SmartTokenCrawler {
 
       if (!response.ok) throw new Error(`DexScreener API error: ${response.status}`);
       
-      const data = await response.json();
+      const data = await response.json() as any;
       return data.pairs?.slice(0, 100).map((pair: any) => ({
         address: pair.baseToken.address,
         name: pair.baseToken.name,
@@ -181,7 +181,7 @@ class SmartTokenCrawler {
 
       if (!response.ok) throw new Error(`Raydium API error: ${response.status}`);
       
-      const data = await response.json();
+      const data = await response.json() as any;
       return data.official?.filter((pool: any) => pool.lpAmount > 10000).slice(0, 50).map((pool: any) => ({
         address: pool.baseMint,
         name: pool.name || 'Unknown',
@@ -291,21 +291,23 @@ class SmartTokenCrawler {
       const { error } = await this.supabase
         .from('tokens')
         .upsert({
-          mint_address: tokenData.address,
+          address: tokenData.address,
           name: tokenData.name,
           symbol: tokenData.symbol,
-          token_price: tokenData.price,
+          price: tokenData.price,
           volume_24h: tokenData.volume24h,
           price_change_24h: tokenData.priceChange24h,
           liquidity: tokenData.liquidity,
-          holder_count: tokenData.holders,
+          holders: tokenData.holders,
           market_cap: tokenData.marketCap,
           tier,
           source: tokenData.source,
-          updated_at: new Date().toISOString(),
-          created_at: new Date(tokenData.createdAt).toISOString()
+          is_active: true,
+          is_verified: false, // Will be updated by verification process
+          created_at: new Date(tokenData.createdAt).toISOString(),
+          last_updated: new Date().toISOString()
         }, { 
-          onConflict: 'mint_address' 
+          onConflict: 'address' 
         });
 
       if (error) {
@@ -320,12 +322,12 @@ class SmartTokenCrawler {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
     try {
-      // Remove tokens with 0 volume for 7+ days
+      // Deactivate tokens with 0 volume for 7+ days (don't delete, just mark inactive)
       await this.supabase
         .from('tokens')
-        .delete()
+        .update({ is_active: false })
         .eq('volume_24h', 0)
-        .lt('updated_at', sevenDaysAgo);
+        .lt('last_updated', sevenDaysAgo);
 
       // Demote tokens that lost activity (move from tier 1/2 to tier 3)
       await this.supabase
@@ -388,8 +390,8 @@ class SmartTokenCrawler {
         // Skip validation for tokens we already have in database
         const { data: existingToken } = await this.supabase
           .from('tokens')
-          .select('mint_address')
-          .eq('mint_address', token.address)
+          .select('address')
+          .eq('address', token.address)
           .single();
           
         if (existingToken) {
