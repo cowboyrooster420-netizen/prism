@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import TokenChart from './TokenChart';
 
 interface Token {
-  id: string;
+  id: string | number;
   name: string;
   symbol: string;
   address: string;

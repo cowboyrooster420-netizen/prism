@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import TokenCard from './TokenCard'
 
 interface Token {
-  id: string
+  id: string | number
   name: string
   symbol: string
   address: string
@@ -20,7 +20,7 @@ interface Token {
 const validateToken = (token: any): token is Token => {
   return (
     token &&
-    typeof token.id === 'string' &&
+    (typeof token.id === 'string' || typeof token.id === 'number') &&
     typeof token.name === 'string' &&
     typeof token.symbol === 'string' &&
     typeof token.address === 'string' &&
@@ -58,6 +58,11 @@ export default function TokenList() {
         
         // Validate each token
         const validTokens = data.tokens.filter(validateToken);
+        
+        console.log('API Response:', data);
+        console.log('Total tokens from API:', data.tokens.length);
+        console.log('Valid tokens after filtering:', validTokens.length);
+        console.log('Sample valid token:', validTokens[0]);
         
         if (validTokens.length !== data.tokens.length) {
           console.warn(`Filtered out ${data.tokens.length - validTokens.length} invalid tokens`);
@@ -104,13 +109,16 @@ export default function TokenList() {
   }
 
   if (tokens.length === 0) {
+    console.log('Rendering: No tokens found');
     return (
       <div className="bg-[#1a1a1f]/60 border border-[#2a2a2e]/30 rounded-xl p-8 text-center">
         <div className="text-gray-400 text-sm">No tokens found</div>
+        <div className="text-gray-500 text-xs mt-2">Debug: tokens.length = {tokens.length}</div>
       </div>
     )
   }
 
+  console.log('Rendering: Tokens found', tokens.length);
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {tokens.slice(0, 6).map((token) => (

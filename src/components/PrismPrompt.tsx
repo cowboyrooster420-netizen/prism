@@ -5,7 +5,7 @@ import TokenCard from './TokenCard'
 import TokenDetailModal from './TokenDetailModal'
 
 interface Token {
-  id: string
+  id: string | number
   name: string
   symbol: string
   address: string
@@ -21,7 +21,7 @@ interface Token {
 const validateToken = (token: any): token is Token => {
   return (
     token &&
-    typeof token.id === 'string' &&
+    (typeof token.id === 'string' || typeof token.id === 'number') &&
     typeof token.name === 'string' &&
     typeof token.symbol === 'string' &&
     typeof token.address === 'string' &&

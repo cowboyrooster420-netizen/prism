@@ -1,6 +1,6 @@
 interface TokenCardProps {
   token: {
-    id: string;
+    id: string | number;
     name: string;
     symbol: string;
     address: string;
