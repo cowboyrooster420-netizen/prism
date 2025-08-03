@@ -41,14 +41,23 @@ const TIER_CONFIG: Record<number, TierConfig> = {
   3: { volume24h: 1000, holders: 50, liquidity: 10000, updateFrequency: 240 }
 };
 
+// Updated quality thresholds that are realistic for crypto markets
 const QUALITY_THRESHOLDS = {
-  minVolume24h: 0, // Temporarily disabled for testing
-  minLiquidity: 100, // Lowered from 1000
-  minHolders: 0, // Lowered from 50 since many tokens won't have holder data
+  minVolume24h: 1000,
+  minLiquidity: 10000,
+  minHolders: 0,  // Jupiter tokens often don't have holder data, so we're more lenient
   minPrice: 0.000001,
   maxDaysInactive: 7,
-  maxPriceChange24h: 1000, // 1000% in 24h is suspicious
-  minTokenAge: 60 * 60 * 1000 // 1 hour minimum age
+  
+  // MUCH more realistic price change thresholds for crypto
+  maxPriceChange24h: 10000,  // 10,000% (100x) - allows for extreme but legitimate pumps
+  minPriceChange24h: -99.9,  // -99.9% (near zero) - allows for major crashes but not impossible -100%
+  
+  // Additional anti-scam filters that don't rely on price movement
+  maxVolumeToLiquidityRatio: 20,  // Volume shouldn't be 20x+ higher than liquidity (pump detection)
+  minTokenAge: 60 * 60 * 1000,    // 1 hour minimum age
+  maxNameLength: 50,              // Suspiciously long names
+  maxSymbolLength: 10             // Suspiciously long symbols
 };
 
 class JupiterSmartCrawler {
@@ -165,59 +174,109 @@ class JupiterSmartCrawler {
     }
   }
 
-  // Quality filtering functions
+  // Updated quality checking function
   private isQualityToken(tokenData: TokenData): boolean {
     const now = Date.now();
     const maxInactiveTime = QUALITY_THRESHOLDS.maxDaysInactive * 24 * 60 * 60 * 1000;
 
-    // For Jupiter tokens, we're more lenient with holder data since it's often not available
-    const hasBasicData = tokenData.volume24h >= QUALITY_THRESHOLDS.minVolume24h &&
+    // Basic volume/liquidity checks (removed holder requirement)
+    const passesBasicChecks = (
+      tokenData.volume24h >= QUALITY_THRESHOLDS.minVolume24h &&
       tokenData.liquidity >= QUALITY_THRESHOLDS.minLiquidity &&
       tokenData.price >= QUALITY_THRESHOLDS.minPrice &&
-      tokenData.lastTradeTime >= (now - maxInactiveTime) &&
+      tokenData.lastTradeTime >= (now - maxInactiveTime)
+    );
+
+    if (!passesBasicChecks) return false;
+
+    // Updated price change validation - much more lenient
+    const priceChangeValid = (
       tokenData.priceChange24h !== null &&
-      Math.abs(tokenData.priceChange24h) <= QUALITY_THRESHOLDS.maxPriceChange24h;
+      tokenData.priceChange24h >= QUALITY_THRESHOLDS.minPriceChange24h &&
+      tokenData.priceChange24h <= QUALITY_THRESHOLDS.maxPriceChange24h
+    );
 
-    // Only check holders if we have the data (BirdEye provides it, DexScreener doesn't)
-    const hasValidHolders = tokenData.holders === 0 || tokenData.holders >= QUALITY_THRESHOLDS.minHolders;
+    if (!priceChangeValid) {
+      console.log(`Token ${tokenData.symbol} rejected for price change: ${tokenData.priceChange24h}%`);
+      return false;
+    }
 
-    return hasBasicData && hasValidHolders && !this.isObviousScam(tokenData);
+    // Anti-pump detection (volume way higher than liquidity)
+    const volumeToLiquidityRatio = tokenData.liquidity > 0 ? tokenData.volume24h / tokenData.liquidity : 0;
+    if (volumeToLiquidityRatio > QUALITY_THRESHOLDS.maxVolumeToLiquidityRatio) {
+      console.log(`Token ${tokenData.symbol} rejected for suspicious volume/liquidity ratio: ${volumeToLiquidityRatio.toFixed(2)}x`);
+      return false;
+    }
+
+    // Token age check - skip for Jupiter tokens since we don't have reliable creation dates
+    // if (tokenData.createdAt > (now - QUALITY_THRESHOLDS.minTokenAge)) {
+    //   console.log(`Token ${tokenData.symbol} rejected for being too new`);
+    //   return false;
+    // }
+
+    // Name/symbol length checks
+    if (tokenData.name.length > QUALITY_THRESHOLDS.maxNameLength ||
+        tokenData.symbol.length > QUALITY_THRESHOLDS.maxSymbolLength) {
+      console.log(`Token ${tokenData.symbol} rejected for suspicious name/symbol length`);
+      return false;
+    }
+
+    // Scam detection
+    if (this.isObviousScam(tokenData)) {
+      console.log(`Token ${tokenData.symbol} rejected as obvious scam`);
+      return false;
+    }
+
+    return true;
   }
 
+  // Enhanced scam detection that doesn't rely on price movements
   private isObviousScam(tokenData: TokenData): boolean {
-    const suspiciousNamePatterns = ['test', 'fake', 'scam', 'rug', 'moon', 'safe'];
+    const suspiciousNamePatterns = [
+      'test', 'fake', 'scam', 'rug', 'honeypot',
+      'airdrop', 'claim', 'winner', 'congratulations',
+      'free', 'bonus', 'gift', 'reward'
+    ];
+
     const nameContainsSuspicious = suspiciousNamePatterns.some(pattern =>
       tokenData.name?.toLowerCase().includes(pattern) ||
       tokenData.symbol?.toLowerCase().includes(pattern)
     );
 
+    // Red flags for scam tokens (removed holder check)
     return (
       nameContainsSuspicious ||
-      tokenData.symbol?.length > 10 ||
-      // Only check holders if we have the data and it's suspiciously low
-      (tokenData.holders > 0 && tokenData.holders < 5) ||
-      (tokenData.volume24h > 0 && tokenData.liquidity > 0 && (tokenData.volume24h / tokenData.liquidity) > 10) ||
-      tokenData.name?.length > 50 ||
-      !tokenData.name ||
-      !tokenData.symbol ||
-      tokenData.name === tokenData.symbol // Lazy naming
+      !tokenData.name ||                           // Missing name
+      !tokenData.symbol ||                         // Missing symbol
+      tokenData.name === tokenData.symbol ||       // Lazy naming
+      tokenData.name.length < 2 ||                 // Too short name
+      tokenData.symbol.length < 2 ||               // Too short symbol
+      /^[0-9]+$/.test(tokenData.symbol) ||         // Symbol is just numbers
+      /[^\w\s-.]/.test(tokenData.name) ||          // Strange characters in name
+      tokenData.name.toUpperCase() === tokenData.name && tokenData.name.length > 10 // ALL CAPS long names
     );
   }
 
+  // Updated tier assignment (removed holder requirements)
   private assignTier(tokenData: TokenData): number {
-    for (const [tier, config] of Object.entries(TIER_CONFIG)) {
-      // For Jupiter tokens, we're more lenient with holder requirements
-      const hasValidHolders = tokenData.holders === 0 || tokenData.holders >= config.holders;
-      
-      if (
-        tokenData.volume24h >= config.volume24h &&
-        hasValidHolders &&
-        tokenData.liquidity >= config.liquidity
-      ) {
-        return parseInt(tier);
-      }
+    // Tier 1: High volume, good liquidity
+    if (
+      tokenData.volume24h >= 50000 &&
+      tokenData.liquidity >= 100000
+    ) {
+      return 1;
     }
-    return 3; // Default to lowest tier
+
+    // Tier 2: Medium volume, decent liquidity
+    if (
+      tokenData.volume24h >= 10000 &&
+      tokenData.liquidity >= 25000
+    ) {
+      return 2;
+    }
+
+    // Tier 3: Low but real volume
+    return 3;
   }
 
   // Process tokens in batches to avoid rate limits
@@ -257,11 +316,12 @@ class JupiterSmartCrawler {
               volume24h: tokenData.volume24h,
               liquidity: tokenData.liquidity,
               holders: tokenData.holders,
-              price: tokenData.price
+              price: tokenData.price,
+              priceChange24h: tokenData.priceChange24h
             });
+            return null;
           }
 
-          // Temporarily bypass quality filter for testing
           return fullTokenData;
         } catch (error) {
           console.error(`Error processing token ${jupiterToken.symbol}:`, error);
@@ -294,9 +354,29 @@ class JupiterSmartCrawler {
     // Clean and validate logo URL to avoid database constraint issues
     let cleanLogoUrl = tokenData.logoUrl;
     if (cleanLogoUrl) {
-      // Remove problematic characters or set to undefined if URL is too complex
+      // Very aggressive URL cleaning to avoid database constraint violations
       if (cleanLogoUrl.includes('?') || cleanLogoUrl.includes('&') || 
-          cleanLogoUrl.includes('=') || cleanLogoUrl.length > 500) {
+          cleanLogoUrl.includes('=') || cleanLogoUrl.length > 200 ||
+          cleanLogoUrl.includes('githubusercontent.com') ||
+          cleanLogoUrl.includes('statics.solscan.io') ||
+          cleanLogoUrl.includes('img.fotofolio.xyz') ||
+          cleanLogoUrl.includes('pbs.twimg.com') ||
+          cleanLogoUrl.includes('cdn.bridgesplit.com') ||
+          cleanLogoUrl.includes('dd.dexscreener.com') ||
+          cleanLogoUrl.includes('image-cdn.solana.fm') ||
+          cleanLogoUrl.includes('hivemapper-marketing-public.s3') ||
+          cleanLogoUrl.includes('creator-hub-prod.s3') ||
+          cleanLogoUrl.includes('4183046207-files.gitbook.io') ||
+          cleanLogoUrl.includes('pajamas.cat') ||
+          cleanLogoUrl.includes('gateway.irys.xyz') ||
+          cleanLogoUrl.includes('shdw-drive.genesysgo.net') ||
+          cleanLogoUrl.includes('arweave.net') ||
+          cleanLogoUrl.includes('chexbacca.com') ||
+          cleanLogoUrl.includes('www.circle.com') ||
+          cleanLogoUrl.includes('ipfs.io') ||
+          cleanLogoUrl.includes('raw.githubusercontent.com') ||
+          cleanLogoUrl.includes('fotofolio.xyz') ||
+          cleanLogoUrl.includes('genesysgo.net')) {
         cleanLogoUrl = undefined;
       }
     }
@@ -378,7 +458,7 @@ class JupiterSmartCrawler {
           token.name.toLowerCase().includes(pattern) || 
           token.symbol.toLowerCase().includes(pattern)
         )
-      ).slice(0, 1000); // Process up to 1,000 tokens for quicker testing
+      ).slice(0, 10000); // Process up to 10,000 tokens
 
       console.log(`Filtered to ${filteredTokens.length} potentially valid tokens from ${jupiterTokens.length} total`);
 

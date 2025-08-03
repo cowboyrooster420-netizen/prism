@@ -53,11 +53,11 @@ CREATE TABLE tokens (
     volume_7d NUMERIC(20, 2) DEFAULT 0 
         CHECK (volume_7d >= 0),
 
-    -- Price change metrics
+    -- Price change metrics (allowing for extreme crypto volatility)
     price_change_24h NUMERIC(10, 4) DEFAULT 0 
-        CHECK (price_change_24h BETWEEN -100 AND 100),
+        CHECK (price_change_24h BETWEEN -9999 AND 9999),
     price_change_7d NUMERIC(10, 4) DEFAULT 0 
-        CHECK (price_change_7d BETWEEN -100 AND 100),
+        CHECK (price_change_7d BETWEEN -9999 AND 9999),
 
     -- Liquidity and holder data
     liquidity NUMERIC(20, 2) DEFAULT 0 

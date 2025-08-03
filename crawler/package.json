@@ -11,6 +11,8 @@
     "enrich-moralis": "tsx moralis-enrichment.ts",
     "markets": "tsx birdeye-markets-crawler.ts",
     "smart": "tsx smart-crawler.ts",
+    "jupiter": "tsx jupiter-crawler.ts",
+    "re-evaluate": "tsx scripts/re-evaluate-tokens.ts",
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

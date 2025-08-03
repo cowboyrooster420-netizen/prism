@@ -38,9 +38,9 @@ const TIER_CONFIG: Record<number, TierConfig> = {
 };
 
 const QUALITY_THRESHOLDS = {
-  minVolume24h: 1000,
-  minLiquidity: 10000,
-  minHolders: 50,
+  minVolume24h: 100, // Lowered from 1000
+  minLiquidity: 1000, // Lowered from 10000
+  minHolders: 0, // Lowered from 50 since BirdEye doesn't provide holder counts
   minPrice: 0.000001,
   maxDaysInactive: 7,
   maxPriceChange24h: 1000, // 1000% in 24h is suspicious
@@ -117,11 +117,11 @@ class SmartTokenCrawler {
   // API fetchers for different sources
   private async fetchBirdeyeTokens(): Promise<TokenData[]> {
     try {
-      const response = await fetch('https://public-api.birdeye.so/defi/tokenlist?sort_by=v24hUSD&sort_type=desc&offset=0&limit=100&min_liquidity=100', {
+      const response = await fetch('https://public-api.birdeye.so/defi/tokenlist?sort_by=v24hUSD&sort_type=desc&offset=0&limit=50&min_liquidity=100', {
         headers: {
-          'X-API-KEY': this.birdeyeApiKey,
           'accept': 'application/json',
-          'x-chain': 'solana'
+          'x-chain': 'solana',
+          'X-API-KEY': this.birdeyeApiKey
         }
       });
 
@@ -230,7 +230,11 @@ class SmartTokenCrawler {
   private async fetchTokenFromBirdeye(address: string): Promise<TokenData | null> {
     try {
       const response = await fetch(`https://public-api.birdeye.so/defi/token_overview?address=${address}`, {
-        headers: { 'X-API-KEY': this.birdeyeApiKey }
+        headers: {
+          'accept': 'application/json',
+          'x-chain': 'solana',
+          'X-API-KEY': this.birdeyeApiKey
+        }
       });
 
       if (!response.ok) return null;
