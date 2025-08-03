@@ -8,7 +8,7 @@ interface Token {
   id: string
   name: string
   symbol: string
-  mint_address: string
+  address: string
   price?: number
   price_change_24h?: number
   volume_24h?: number
@@ -16,6 +16,23 @@ interface Token {
   liquidity?: number
   updated_at?: string
 }
+
+// Validate token data
+const validateToken = (token: any): token is Token => {
+  return (
+    token &&
+    typeof token.id === 'string' &&
+    typeof token.name === 'string' &&
+    typeof token.symbol === 'string' &&
+    typeof token.address === 'string' &&
+    (token.price === undefined || typeof token.price === 'number') &&
+    (token.price_change_24h === undefined || typeof token.price_change_24h === 'number') &&
+    (token.volume_24h === undefined || typeof token.volume_24h === 'number') &&
+    (token.market_cap === undefined || typeof token.market_cap === 'number') &&
+    (token.liquidity === undefined || typeof token.liquidity === 'number') &&
+    (token.updated_at === undefined || typeof token.updated_at === 'string')
+  );
+};
 
 export default function PrismPrompt() {
   const [input, setInput] = useState('')
@@ -25,9 +42,34 @@ export default function PrismPrompt() {
   const [selectedToken, setSelectedToken] = useState<Token | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
+  const validateInput = (input: string): string | null => {
+    if (!input.trim()) {
+      return 'Please enter a search query';
+    }
+    
+    if (input.length > 500) {
+      return 'Search query is too long (max 500 characters)';
+    }
+    
+    // Basic security check
+    if (/[<>{}]/.test(input)) {
+      return 'Search query contains invalid characters';
+    }
+    
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isLoading) return
+    
+    // Validate input
+    const validationError = validateInput(input);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    
+    if (isLoading) return;
 
     setIsLoading(true)
     setError(null)
@@ -39,18 +81,32 @@ export default function PrismPrompt() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: input }),
+        body: JSON.stringify({ prompt: input.trim() }),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to process prompt')
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json()
-      setTokens(data.tokens || [])
+      
+      // Validate response structure
+      if (!data || !Array.isArray(data.tokens)) {
+        throw new Error('Invalid response format from API');
+      }
+      
+      // Validate each token
+      const validTokens = data.tokens.filter(validateToken);
+      
+      if (validTokens.length !== data.tokens.length) {
+        console.warn(`Filtered out ${data.tokens.length - validTokens.length} invalid tokens`);
+      }
+      
+      setTokens(validTokens);
     } catch (err) {
       console.error('Error processing prompt:', err)
-      setError('Failed to process your request. Please try again.')
+      setError(err instanceof Error ? err.message : 'Failed to process your request. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -65,6 +121,14 @@ export default function PrismPrompt() {
     setIsModalOpen(false)
     setSelectedToken(null)
   }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+    // Clear error when user starts typing
+    if (error) {
+      setError(null);
+    }
+  };
 
   return (
     <>
@@ -87,7 +151,7 @@ export default function PrismPrompt() {
                 <input
                   type="text"
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
+                  onChange={handleInputChange}
                   placeholder="Try: tokens with volume_24h > 100k and market_cap < 5m"
                   disabled={isLoading}
                   className="w-full text-white bg-transparent placeholder-gray-500 text-lg outline-none font-inter font-medium leading-relaxed border-b border-[#2a2a2e]/50 focus:border-glowBlue/50 transition-colors duration-300 pb-3 disabled:opacity-50"
@@ -109,8 +173,15 @@ export default function PrismPrompt() {
                   )}
 
                   {error && (
-                    <div className="text-red-400 text-sm mb-4">
-                      {error}
+                    <div className="text-red-400 text-sm mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                      <div className="font-medium mb-1">Error</div>
+                      <div>{error}</div>
+                      <button 
+                        onClick={() => setError(null)}
+                        className="mt-2 text-xs text-red-300 hover:text-red-200 underline"
+                      >
+                        Dismiss
+                      </button>
                     </div>
                   )}
 

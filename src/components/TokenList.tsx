@@ -7,7 +7,7 @@ interface Token {
   id: string
   name: string
   symbol: string
-  mint_address: string
+  address: string
   price?: number
   price_change_24h?: number
   volume_24h?: number
@@ -15,6 +15,23 @@ interface Token {
   liquidity?: number
   updated_at?: string
 }
+
+// Validate token data
+const validateToken = (token: any): token is Token => {
+  return (
+    token &&
+    typeof token.id === 'string' &&
+    typeof token.name === 'string' &&
+    typeof token.symbol === 'string' &&
+    typeof token.address === 'string' &&
+    (token.price === undefined || typeof token.price === 'number') &&
+    (token.price_change_24h === undefined || typeof token.price_change_24h === 'number') &&
+    (token.volume_24h === undefined || typeof token.volume_24h === 'number') &&
+    (token.market_cap === undefined || typeof token.market_cap === 'number') &&
+    (token.liquidity === undefined || typeof token.liquidity === 'number') &&
+    (token.updated_at === undefined || typeof token.updated_at === 'string')
+  );
+};
 
 export default function TokenList() {
   const [tokens, setTokens] = useState<Token[]>([])
@@ -24,22 +41,39 @@ export default function TokenList() {
   useEffect(() => {
     async function fetchTokens() {
       try {
-        const response = await fetch('/api/tokens')
+        setLoading(true);
+        setError(null);
+        
+        const response = await fetch('/api/tokens');
         if (!response.ok) {
-          throw new Error('Failed to fetch tokens')
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const data = await response.json()
-        setTokens(data.tokens || [])
+        
+        const data = await response.json();
+        
+        // Validate response structure
+        if (!data || !Array.isArray(data.tokens)) {
+          throw new Error('Invalid response format from API');
+        }
+        
+        // Validate each token
+        const validTokens = data.tokens.filter(validateToken);
+        
+        if (validTokens.length !== data.tokens.length) {
+          console.warn(`Filtered out ${data.tokens.length - validTokens.length} invalid tokens`);
+        }
+        
+        setTokens(validTokens);
       } catch (err) {
-        console.error('Error fetching tokens:', err)
-        setError(err instanceof Error ? err.message : 'Failed to fetch tokens')
+        console.error('Error fetching tokens:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch tokens');
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
-    fetchTokens()
-  }, [])
+    fetchTokens();
+  }, []);
 
   if (loading) {
     return (
@@ -59,6 +93,12 @@ export default function TokenList() {
     return (
       <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
         <div className="text-red-400 text-sm">Error: {error}</div>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="mt-2 text-xs text-red-300 hover:text-red-200 underline"
+        >
+          Retry
+        </button>
       </div>
     )
   }

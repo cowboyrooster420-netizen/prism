@@ -3,7 +3,7 @@ interface TokenCardProps {
     id: string;
     name: string;
     symbol: string;
-    mint_address: string;
+    address: string;
     price?: number;
     price_change_24h?: number;
     volume_24h?: number;
@@ -81,7 +81,7 @@ export default function TokenCard({ token, onClick }: TokenCardProps) {
               {token.symbol}
             </p>
             <p className="text-xs text-gray-500 font-mono">
-              {token.mint_address.slice(0, 8)}...{token.mint_address.slice(-8)}
+              {token.address.slice(0, 8)}...{token.address.slice(-8)}
             </p>
           </div>
           <div className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold ${

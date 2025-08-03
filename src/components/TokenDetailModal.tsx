@@ -7,7 +7,7 @@ interface Token {
   id: string;
   name: string;
   symbol: string;
-  mint_address: string;
+  address: string;
   price?: number;
   price_change_24h?: number;
   volume_24h?: number;
@@ -174,7 +174,7 @@ export default function TokenDetailModal({ token, isOpen, onClose }: TokenDetail
                 <div className="space-y-3">
                   <div>
                     <span className="text-gray-400 text-sm">Mint Address</span>
-                    <p className="text-xs font-mono text-gray-300 break-all mt-1">{token.mint_address}</p>
+                    <p className="text-xs font-mono text-gray-300 break-all mt-1">{token.address}</p>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Last Updated</span>
