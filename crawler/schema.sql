@@ -39,7 +39,7 @@ CREATE TABLE tokens (
     name VARCHAR(100) NOT NULL 
         CHECK (length(name) BETWEEN 2 AND 100),
     symbol VARCHAR(20) NOT NULL 
-        CHECK (symbol ~ '^[A-Z0-9$]{2,20}$'),
+        CHECK (symbol ~ '^[A-Za-z0-9$]{2,20}$'),
 
     -- Price and market data
     price NUMERIC(30, 15) DEFAULT 0 

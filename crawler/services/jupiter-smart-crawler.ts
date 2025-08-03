@@ -312,13 +312,7 @@ class JupiterSmartCrawler {
 
           const isQuality = this.isQualityToken(fullTokenData);
           if (!isQuality) {
-            console.log(`Token ${jupiterToken.symbol} failed quality check:`, {
-              volume24h: tokenData.volume24h,
-              liquidity: tokenData.liquidity,
-              holders: tokenData.holders,
-              price: tokenData.price,
-              priceChange24h: tokenData.priceChange24h
-            });
+                      console.log(`Token ${jupiterToken.symbol} failed quality check: volume=${tokenData.volume24h}, liquidity=${tokenData.liquidity}, price=${tokenData.price}, change=${tokenData.priceChange24h}%`);
             return null;
           }
 
