@@ -1,0 +1,9 @@
+[2025-08-05 20:22:05] 
+
+> prism-enrichment-service@1.0.0 enrich
+> node enrichment-service.js enrich
+
+🚀 Starting token enrichment process (auto mode)...
+📊 Found 0 tokens to enrich
+✅ No tokens need enrichment at this time
+[2025-08-05 20:22:05] 

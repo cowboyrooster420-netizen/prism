@@ -239,7 +239,7 @@ class SmartTokenCrawler {
 
       if (!response.ok) return null;
       
-      const data = await response.json();
+      const data = await response.json() as any;
       return data.data ? {
         address,
         name: data.data.name,
@@ -265,7 +265,7 @@ class SmartTokenCrawler {
 
       if (!response.ok) return null;
       
-      const data = await response.json();
+      const data = await response.json() as any;
       const pair = data.pairs?.[0];
       
       return pair ? {

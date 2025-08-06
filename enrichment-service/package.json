@@ -1,0 +1,28 @@
+{
+  "name": "prism-enrichment-service",
+  "version": "1.0.0",
+  "description": "Token holder data enrichment service for Prism using Solscan API",
+  "main": "enrichment-service.js",
+  "type": "module",
+  "scripts": {
+    "enrich": "node enrichment-service.js enrich",
+    "enrich:new": "node enrichment-service.js enrich new",
+    "enrich:force": "node enrichment-service.js enrich force",
+    "stats": "node enrichment-service.js stats",
+    "test": "node enrichment-service.js test",
+    "start": "node enrichment-service.js enrich",
+    "cron:hourly": "node enrichment-service.js enrich",
+    "cron:force": "node enrichment-service.js enrich force"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "node-fetch": "^3.3.2",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+} 

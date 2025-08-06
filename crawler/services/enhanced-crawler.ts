@@ -1,4 +1,5 @@
-import { BIRDEYE_API_KEY, HELIUS_API_KEY, sleep } from '../config';
+import { BIRDEYE_API_KEY, HELIUS_API_KEY } from '../config';
+import { sleep } from '../utils/sleep';
 import { getTopBirdEyeTokens, getTrendingBirdEyeTokens } from './birdeye';
 import { getHeliusMetadata } from './helius';
 import { upsertToken } from './supabase';

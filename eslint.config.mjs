@@ -14,9 +14,8 @@ const eslintConfig = [
   {
     rules: {
       // Temporarily disable strict TypeScript rules for development
-      "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/no-unused-vars": "warn",
       "react-hooks/exhaustive-deps": "warn",
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
 ];

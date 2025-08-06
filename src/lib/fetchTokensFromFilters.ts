@@ -51,7 +51,6 @@ export async function fetchTokensFromFilters(filters: Filter[]) {
       }
 
       if (['eq', 'lt', 'lte', 'gt', 'gte', 'like'].includes(f.operator)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         query = (query as any)[f.operator](f.column, f.value)
       }
     }

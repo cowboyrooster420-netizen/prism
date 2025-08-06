@@ -86,7 +86,7 @@ class JupiterSmartCrawler {
         throw new Error(`Jupiter API error: ${response.status}`);
       }
       
-      const tokens = await response.json();
+      const tokens = await response.json() as JupiterToken[];
       console.log(`Jupiter returned ${tokens.length} total tokens`);
       
       return tokens;
@@ -125,8 +125,8 @@ class JupiterSmartCrawler {
         priceResponse.json()
       ]);
 
-      const overview = overviewData.data;
-      const price = priceData.data;
+      const overview = (overviewData as any).data;
+      const price = (priceData as any).data;
 
       if (!overview || !price) return null;
 
@@ -153,7 +153,7 @@ class JupiterSmartCrawler {
 
       if (!response.ok) return null;
       
-      const data = await response.json();
+      const data = await response.json() as any;
       const pair = data.pairs?.[0];
       
       if (!pair) return null;
@@ -523,9 +523,9 @@ class JupiterSmartCrawler {
       }
 
       for (const batch of updateBatches) {
-        const updatePromises = batch.map(async (token) => {
+        const updatePromises = batch.map(async (token: any) => {
           const tokenData = await this.getBirdeyeTokenData(token.address);
-          if (tokenData && tokenData.volume24h > 0) {
+                      if (tokenData && tokenData.volume24h && tokenData.volume24h > 0) {
             await this.supabase
               .from('tokens')
               .update({

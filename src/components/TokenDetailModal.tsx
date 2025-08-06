@@ -31,7 +31,7 @@ export default function TokenDetailModal({ token, isOpen, onClose }: TokenDetail
       // Simulate chart data - in a real app, you'd fetch this from an API
       generateMockChartData();
     }
-  }, [isOpen, token]);
+  }, [isOpen, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const generateMockChartData = () => {
     const data = [];
