@@ -1,0 +1,72 @@
+import { NextApiRequest, NextApiResponse } from 'next'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === 'POST') {
+    try {
+      const { tokens } = req.body
+
+      if (!tokens || !Array.isArray(tokens)) {
+        return res.status(400).json({ error: 'Invalid tokens data' })
+      }
+
+      // Get user ID from auth header
+      const authHeader = req.headers.authorization
+      if (!authHeader) {
+        return res.status(401).json({ error: 'Unauthorized' })
+      }
+
+      const token = authHeader.replace('Bearer ', '')
+      // TODO: Implement proper JWT verification
+      const userId = 'temp-user-id' // Replace with actual user ID from JWT
+
+      // Verify ownership of all watchlists before adding tokens
+      const watchlistIds = [...new Set(tokens.map(t => t.watchlist_id))]
+      
+      const { data: watchlists, error: fetchError } = await supabase
+        .from('watchlists')
+        .select('id')
+        .eq('user_id', userId)
+        .in('id', watchlistIds)
+
+      if (fetchError) {
+        console.error('Error fetching watchlists:', fetchError)
+        return res.status(500).json({ error: 'Failed to verify watchlist ownership' })
+      }
+
+      const validWatchlistIds = new Set(watchlists?.map(w => w.id) || [])
+      const validTokens = tokens.filter(t => validWatchlistIds.has(t.watchlist_id))
+
+      if (validTokens.length === 0) {
+        return res.status(400).json({ error: 'No valid watchlists found' })
+      }
+
+      // Add tokens to watchlists
+      const { data: addedTokens, error: insertError } = await supabase
+        .from('watchlist_tokens')
+        .insert(validTokens)
+        .select()
+
+      if (insertError) {
+        console.error('Error adding tokens to watchlists:', insertError)
+        return res.status(500).json({ error: 'Failed to add tokens to watchlists' })
+      }
+
+      res.status(201).json({ 
+        message: `Added ${addedTokens?.length || 0} tokens to watchlists`,
+        tokens: addedTokens 
+      })
+    } catch (error) {
+      console.error('Error in POST /api/watchlists/tokens:', error)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  } else {
+    res.setHeader('Allow', ['POST'])
+    res.status(405).json({ error: `Method ${req.method} Not Allowed` })
+  }
+}

@@ -89,7 +89,7 @@ async function getLastTs(token_id: string, timeframe: Timeframe): Promise<Date |
   return data && data.length ? new Date(data[0].ts) : null;
 }
 
-// ---- BirdEye fetch ----
+// ---- BirdEye fetch (V3 primary, V2 fallback) ----
 type BirdEyeCandle = {
   unixTime: number; // seconds
   o?: number; h?: number; l?: number; c?: number; v?: number;
@@ -113,8 +113,8 @@ async function fetchBirdEyeCandles(
   });
 
   const endpoints = [
-    `${BIRDEYE_BASE_URL}/defi/ohlcv?${params.toString()}`,
-    `${BIRDEYE_BASE_URL}/defi/history_price?${params.toString()}`
+    `${BIRDEYE_BASE_URL}/defi/ohlcv3?${params.toString()}`,
+    `${BIRDEYE_BASE_URL}/defi/ohlcv?${params.toString()}` // fallback to v2
   ];
 
   for (const url of endpoints) {
@@ -269,3 +269,4 @@ run().then(() => process.exit(0)).catch(e => {
   console.error(e);
   process.exit(1);
 });
+
