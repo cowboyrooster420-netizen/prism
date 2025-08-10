@@ -452,7 +452,7 @@ class JupiterSmartCrawler {
           token.name.toLowerCase().includes(pattern) || 
           token.symbol.toLowerCase().includes(pattern)
         )
-      ).slice(0, 10000); // Process up to 10,000 tokens
+      ).slice(0, 15000); // Process up to 15,000 tokens
 
       console.log(`Filtered to ${filteredTokens.length} potentially valid tokens from ${jupiterTokens.length} total`);
 

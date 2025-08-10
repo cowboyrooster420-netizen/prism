@@ -1,0 +1,121 @@
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin as supabase } from '@/lib/supabaseClient';
+
+// Minimal runtime types
+type CompOp = '>=' | '<=' | '>' | '<' | '==' | 'between';
+
+type TAFilter =
+  | { metric: string; op: CompOp; value: number | [number, number]; timeframe?: string }
+  | { op: 'cross'; a: string; b: string; timeframe?: string }
+  | { op: 'event'; name: string; within?: number; timeframe?: string };
+
+type TAScreenRequest = {
+  timeframe?: '1m'|'5m'|'15m'|'1h'|'4h'|'1d';
+  filters: TAFilter[];
+  sort?: { by: string; dir: 'asc'|'desc' };
+  limit?: number;
+  min_usd_liquidity?: number;
+};
+
+const ALLOWED_METRICS = new Set([
+  'sma7','sma20','sma50','sma200',
+  'ema7','ema20','ema50','ema200',
+  'rsi14','macd','macd_signal','macd_hist','atr14',
+  'donchian_high_20','donchian_low_20',
+  'bb_width','bb_width_pctl60',
+  'vol_ma20','vol_z60','vol_z60_slope',
+  // boolean events
+  'cross_ema7_over_ema20','cross_ema50_over_ema200',
+  'breakout_high_20','breakout_low_20','near_breakout_high_20','bullish_rsi_div',
+  // optionally denormalized liquidity if present
+  'quote_volume_usd'
+]);
+
+function isCompFilter(f: TAFilter): f is Extract<TAFilter, { metric: string }> {
+  return (f as any).metric !== undefined;
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const body = req.body as TAScreenRequest;
+  if (!body || !Array.isArray(body.filters)) {
+    return res.status(400).json({ error: 'Invalid request body' });
+  }
+
+  const timeframe = body.timeframe;
+  let limit = Math.min(Math.max(body.limit ?? 50, 1), 500);
+
+  // Build base query against latest snapshot
+  let query = supabase.from('ta_latest').select('*');
+  if (timeframe) query = query.eq('timeframe', timeframe);
+
+  // Apply filters
+  for (const f of body.filters) {
+    // timeframe-specific filter (override per filter)
+    if ((f as any).timeframe) {
+      query = query.eq('timeframe', (f as any).timeframe);
+    }
+
+    if (isCompFilter(f)) {
+      const col = f.metric;
+      if (!ALLOWED_METRICS.has(col)) return res.status(400).json({ error: `Unsupported metric: ${col}` });
+      const op = f.op;
+      const val = f.value as any;
+      switch (op) {
+        case '>=': query = query.gte(col, val as number); break;
+        case '<=': query = query.lte(col, val as number); break;
+        case '>':  query = query.gt(col,  val as number); break;
+        case '<':  query = query.lt(col,  val as number); break;
+        case '==': query = query.eq(col,  val as number); break;
+        case 'between': {
+          const [a,b] = val as [number, number];
+          query = query.gte(col, a).lte(col, b);
+          break;
+        }
+        default:
+          return res.status(400).json({ error: `Unsupported op: ${op}` });
+      }
+    } else if (f.op === 'cross') {
+      const col = `cross_${f.a}_over_${f.b}`;
+      if (!ALLOWED_METRICS.has(col)) return res.status(400).json({ error: `Unsupported cross: ${col}` });
+      query = query.eq(col, true);
+    } else if (f.op === 'event') {
+      const col = f.name;
+      if (!ALLOWED_METRICS.has(col)) return res.status(400).json({ error: `Unsupported event: ${col}` });
+      // Latest-only event; within window requires scanning ta_features (future enhancement)
+      query = query.eq(col, true);
+    }
+  }
+
+  // min liquidity (if denormalized column exists)
+  const applyLiquidity = typeof body.min_usd_liquidity === 'number';
+  let data, error;
+
+  async function run(tryLiquidity: boolean) {
+    let q = query;
+    if (body.sort?.by) {
+      const by = body.sort.by;
+      const asc = body.sort.dir === 'asc';
+      if (!ALLOWED_METRICS.has(by)) return { data: null, error: { message: `Unsupported sort: ${by}` } } as any;
+      q = q.order(by, { ascending: asc, nullsFirst: false });
+    } else {
+      q = q.order('ts', { ascending: false });
+    }
+    if (tryLiquidity && applyLiquidity) {
+      q = q.gte('quote_volume_usd', body.min_usd_liquidity as number);
+    }
+    q = q.limit(limit);
+    return await q;
+  }
+
+  ({ data, error } = await run(true));
+
+  // Retry without liquidity filter if column is missing
+  if (error && String(error.message || '').toLowerCase().includes('column') && String(error.message).includes('quote_volume_usd')) {
+    ({ data, error } = await run(false));
+  }
+
+  if (error) return res.status(500).json({ error: error.message || 'Query failed' });
+  return res.status(200).json({ results: data ?? [] });
+}

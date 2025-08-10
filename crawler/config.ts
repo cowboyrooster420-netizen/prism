@@ -29,6 +29,7 @@ export const MIN_LIQUIDITY = 10000; // $10k minimum liquidity
 // API Keys - Load from environment variables
 export const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY!;
 export const MORALIS_API_KEY = process.env.MORALIS_API_KEY!;
+export const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
 
 // Validate required environment variables
 if (!HELIUS_API_KEY) {
@@ -45,4 +46,7 @@ if (!BIRDEYE_API_KEY) {
 }
 if (!MORALIS_API_KEY) {
   throw new Error('MORALIS_API_KEY is required');
+}
+if (!OPENAI_API_KEY) {
+  throw new Error('OPENAI_API_KEY is required');
 } 

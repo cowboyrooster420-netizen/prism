@@ -1,4 +1,4 @@
-import { Activity, Star, MessageSquare, Clock } from "lucide-react";
+import { Activity, Star, MessageSquare, Clock, Brain } from "lucide-react";
 
 export default function Sidebar() {
   return (
@@ -13,7 +13,7 @@ export default function Sidebar() {
 
         <nav className="flex flex-col gap-3 text-sm">
           <NavItem icon={<Activity size={18} />} label="Trending" href="/" />
-          <NavItem icon={<Star size={18} />} label="Watchlists" href="/watchlists" />
+          <NavItem icon={<Brain size={18} />} label="AI Watchlist" href="/watchlist" />
           <NavItem icon={<MessageSquare size={18} />} label="Prism Chat" href="/" />
           <NavItem icon={<Clock size={18} />} label="History" href="/history" />
         </nav>
