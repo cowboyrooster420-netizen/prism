@@ -21,9 +21,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(401).json({ error: 'Unauthorized' })
       }
 
-      const token = authHeader.replace('Bearer ', '')
-      // TODO: Implement proper JWT verification
-      const userId = 'temp-user-id' // Replace with actual user ID from JWT
+      // Get user ID from middleware headers
+      const userId = req.headers['x-user-id'] as string
+      
+      if (!userId) {
+        return res.status(401).json({ error: 'User not authenticated' })
+      }
 
       // Verify ownership before deletion
       const { data: watchlist, error: fetchError } = await supabase

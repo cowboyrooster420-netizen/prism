@@ -1,4 +1,5 @@
 import { Activity, Star, MessageSquare, Clock, Brain } from "lucide-react";
+import AuthButton from './AuthButton';
 
 export default function Sidebar() {
   return (
@@ -20,7 +21,10 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      <div className="text-xs text-gray-500 font-medium tracking-wide">v0.1 alpha</div>
+      <div className="space-y-4">
+        <AuthButton />
+        <div className="text-xs text-gray-500 font-medium tracking-wide text-center">v0.1 alpha</div>
+      </div>
     </aside>
   );
 }

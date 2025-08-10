@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, Star, MoreVertical, Edit3, Trash2, Eye, EyeOff } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Plus, Star, MoreVertical, Edit3, Trash2, Eye, EyeOff, LogIn } from 'lucide-react'
 import CreateWatchlistModal from './CreateWatchlistModal'
 import AddTokenModal from './AddTokenModal'
 import WatchlistCard from './WatchlistCard'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface Watchlist {
   id: string
@@ -17,6 +18,7 @@ interface Watchlist {
 }
 
 export default function WatchlistManager() {
+  const { user, token } = useAuth()
   const [watchlists, setWatchlists] = useState<Watchlist[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -24,18 +26,23 @@ export default function WatchlistManager() {
   const [isAddTokenModalOpen, setIsAddTokenModalOpen] = useState(false)
   const [selectedWatchlist, setSelectedWatchlist] = useState<Watchlist | null>(null)
 
-  useEffect(() => {
-    fetchWatchlists()
-  }, [])
-
-  const fetchWatchlists = async () => {
+  const fetchWatchlists = useCallback(async () => {
+    if (!token) return
+    
     try {
       setIsLoading(true)
       setError(null)
 
-      const response = await fetch('/api/watchlists')
+      const response = await fetch('/api/watchlists', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
       
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Please sign in to view your watchlists')
+        }
         throw new Error('Failed to fetch watchlists')
       }
 
@@ -47,7 +54,11 @@ export default function WatchlistManager() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [token])
+
+  useEffect(() => {
+    fetchWatchlists();
+  }, [fetchWatchlists]);
 
   const handleCreateWatchlist = async (name: string, description: string, isPublic: boolean) => {
     try {
