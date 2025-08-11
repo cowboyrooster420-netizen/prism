@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 220" role="img" aria-label="Prism logo - faceted pyramid">
+  <style>
+    :root {
+      --face-left:#3bb0ff; --face-right:#3bff75; --face-bottom:#8b5cf6; --word:#ffffff;
+    }
+    .left{fill:var(--face-left)} .right{fill:var(--face-right)} .bottom{fill:var(--face-bottom)}
+    .word{ fill:var(--word); font: 800 120px/1 Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; letter-spacing: -0.5px; }
+  </style>
+  <g transform="translate(20,10)">
+    <polygon class="left" points="10,180 110,10 110,120"/>
+    <polygon class="right" points="110,10 210,180 110,120"/>
+    <polygon class="bottom" points="10,180 210,180 110,120"/>
+  </g>
+  <text class="word" x="260" y="155">Prism</text>
+</svg>

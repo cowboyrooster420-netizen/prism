@@ -6,10 +6,14 @@ export default function Sidebar() {
     <aside className="w-64 min-h-screen bg-gradient-to-b from-[#0b0b0c]/80 to-[#0d0d0e]/90 border-r border-[#1f1f21]/50 backdrop-blur-xl p-8 flex flex-col justify-between shadow-[inset_-1px_0_0_0_rgba(255,255,255,0.05)]">
       <div className="space-y-12">
         <div className="relative">
-          <h1 className="text-2xl font-bold tracking-widest text-white bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-            PRISM
-          </h1>
-          <div className="absolute -bottom-1 left-0 w-8 h-0.5 bg-gradient-to-r from-glowBlue to-transparent rounded-full" />
+          <div className="flex items-center justify-center mb-2">
+            <img
+              src="/logo.svg"
+              alt="Prism Logo"
+              className="h-12 w-auto"
+            />
+          </div>
+          <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-8 h-0.5 bg-gradient-to-r from-glowBlue to-transparent rounded-full" />
         </div>
 
         <nav className="flex flex-col gap-3 text-sm">
