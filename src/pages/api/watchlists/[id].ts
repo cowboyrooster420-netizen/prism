@@ -1,10 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { supabaseAdmin as supabase } from '@/lib/supabase-admin'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query

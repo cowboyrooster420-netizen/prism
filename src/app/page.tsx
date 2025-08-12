@@ -1,7 +1,6 @@
 import Sidebar from "@/components/Sidebar";
 import PrismPrompt from "@/components/PrismPrompt";
 import TrendingCrawl from "@/components/TrendingCrawl";
-import TokenList from "@/components/TokenList";
 
 export default function Home() {
   return (
@@ -26,19 +25,13 @@ export default function Home() {
 
           <div className="flex-1 p-6 lg:p-8 flex flex-col">
             <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
-              {/* PrismPrompt takes up most of the space */}
-              <div className="flex-1 mb-10">
+              {/* PrismPrompt takes up the full space */}
+              <div className="flex-1">
                 <PrismPrompt />
               </div>
-
-              {/* Token cards section pushed to bottom */}
-              <section className="flex-shrink-0">
-                <h2 className="text-sm text-gray-400 uppercase tracking-widest mb-8 font-medium">Tokens Under $5M</h2>
-                <TokenList />
-              </section>
             </div>
-        </div>
-      </main>
+          </div>
+        </main>
       </div>
     </div>
   );

@@ -2,15 +2,13 @@
 
 import { useState } from 'react'
 import AddToWatchlistModal from './AddToWatchlistModal'
-import { ResizableChart } from './ResizableChart'
-import { BarChart3 } from 'lucide-react'
 
 interface TokenCardProps {
   token: {
     id: string | number;
     name: string;
     symbol: string;
-    address: string;
+    mint_address: string;
     price?: number;
     price_change_24h?: number;
     volume_24h?: number;
@@ -23,7 +21,6 @@ interface TokenCardProps {
 
 export default function TokenCard({ token, onClick }: TokenCardProps) {
   const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState(false)
-  const [showChart, setShowChart] = useState(false)
   
   const isPositive = (token.price_change_24h || 0) >= 0;
   
@@ -73,11 +70,6 @@ export default function TokenCard({ token, onClick }: TokenCardProps) {
     setIsWatchlistModalOpen(true)
   }
 
-  const handleChartToggle = (e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent triggering the card click
-    setShowChart(!showChart)
-  }
-
   return (
     <>
       <div 
@@ -102,7 +94,7 @@ export default function TokenCard({ token, onClick }: TokenCardProps) {
                 {token.symbol}
               </p>
               <p className="text-xs text-gray-500 font-mono">
-                {token.address.slice(0, 8)}...{token.address.slice(-8)}
+                {token.mint_address.slice(0, 8)}...{token.mint_address.slice(-8)}
               </p>
             </div>
             <div className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold ${
@@ -143,29 +135,6 @@ export default function TokenCard({ token, onClick }: TokenCardProps) {
           <div className="text-xs text-gray-500 mb-4">
             Updated: {getTimeAgo(token.updated_at)}
           </div>
-
-          {/* Chart Toggle Button */}
-          <div className="flex justify-center mb-4">
-            <button
-              onClick={handleChartToggle}
-              className="flex items-center gap-2 px-4 py-2 bg-[#1a1a1f]/60 hover:bg-[#1a1a1f]/80 border border-[#2a2a2e]/30 rounded-lg text-gray-300 hover:text-white transition-all duration-200"
-            >
-              <BarChart3 size={16} />
-              {showChart ? 'Hide Chart' : 'Show Chart'}
-            </button>
-          </div>
-
-          {/* Chart Area */}
-          {showChart && (
-            <div className="mb-4">
-              <ResizableChart 
-                address={token.address}
-                interval="1h"
-                open={showChart}
-                onClose={() => setShowChart(false)}
-              />
-            </div>
-          )}
 
           {/* Action buttons */}
           {onClick && (

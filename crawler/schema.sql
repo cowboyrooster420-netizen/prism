@@ -34,8 +34,8 @@ CREATE TABLE tokens (
     id BIGSERIAL PRIMARY KEY,
 
     -- Core token identification
-    address VARCHAR(50) UNIQUE NOT NULL 
-        CHECK (length(address) BETWEEN 10 AND 50 AND address ~ '^[a-zA-Z0-9]+$'),
+    mint_address VARCHAR(50) UNIQUE NOT NULL 
+        CHECK (length(mint_address) BETWEEN 32 AND 50 AND mint_address ~ '^[1-9A-HJ-NP-Za-km-z]+$'),
     name VARCHAR(100) NOT NULL 
         CHECK (length(name) BETWEEN 2 AND 100),
     symbol VARCHAR(20) NOT NULL 
@@ -95,7 +95,7 @@ CREATE TABLE tokens (
 );
 
 -- Comprehensive indexes for optimal query performance
-CREATE INDEX idx_tokens_address ON tokens USING btree(address);
+CREATE INDEX idx_tokens_mint_address ON tokens USING btree(mint_address);
 CREATE INDEX idx_tokens_tier ON tokens USING btree(tier);
 CREATE INDEX idx_tokens_volume_24h ON tokens USING btree(volume_24h DESC);
 CREATE INDEX idx_tokens_market_cap ON tokens USING btree(market_cap DESC);
@@ -148,7 +148,7 @@ ORDER BY tier ASC, volume_24h DESC;
 -- Materialized view for trending tokens (better performance)
 CREATE MATERIALIZED VIEW trending_tokens AS
 SELECT
-    address,
+    mint_address,
     name,
     symbol,
     price,
@@ -207,7 +207,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Advanced full-text search function for tokens
 CREATE OR REPLACE FUNCTION search_tokens(search_query TEXT)
 RETURNS TABLE(
-    address VARCHAR(50),
+    mint_address VARCHAR(50),
     name VARCHAR(100),
     symbol VARCHAR(20),
     price NUMERIC(30, 15),
@@ -219,7 +219,7 @@ RETURNS TABLE(
 BEGIN
     RETURN QUERY
     SELECT
-        t.address,
+        t.mint_address,
         t.name,
         t.symbol,
         t.price,
@@ -258,7 +258,7 @@ CREATE POLICY "Allow service role full access" ON tokens
 
 -- Insert some initial verified tokens (optional)
 INSERT INTO tokens (
-    address,
+    mint_address,
     name,
     symbol,
     tier,
@@ -268,7 +268,7 @@ INSERT INTO tokens (
     ('So11111111111111111111111111111111111111112', 'Wrapped SOL', 'SOL', 1, true, 'manual'),
     ('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', 'USD Coin', 'USDC', 1, true, 'manual'),
     ('Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', 'Tether USD', 'USDT', 1, true, 'manual')
-ON CONFLICT (address) DO NOTHING;
+ON CONFLICT (mint_address) DO NOTHING;
 
 -- Grant necessary permissions
 GRANT ALL ON tokens TO authenticated;

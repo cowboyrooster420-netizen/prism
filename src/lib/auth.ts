@@ -1,7 +1,11 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-fallback-secret-key-change-in-production';
+
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('JWT_SECRET environment variable is required in production. Please set a secure JWT secret in your .env file.');
+}
 const JWT_EXPIRES_IN = '7d'; // 7 days
 
 export interface JWTPayload {

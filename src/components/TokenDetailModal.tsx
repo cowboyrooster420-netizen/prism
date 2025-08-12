@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import TokenChart from './TokenChart';
+import { fetchOHLCV } from '@/lib/birdeyeClient';
+import { UTCTimestamp } from 'lightweight-charts';
 
 interface Token {
   id: string | number;
   name: string;
   symbol: string;
-  address: string;
+  mint_address: string;
   price?: number;
   price_change_24h?: number;
   volume_24h?: number;
@@ -23,35 +25,130 @@ interface TokenDetailModalProps {
 }
 
 export default function TokenDetailModal({ token, isOpen, onClose }: TokenDetailModalProps) {
-  const [isLoading, setIsLoading] = useState(false);
   const [chartData, setChartData] = useState<any[]>([]);
+  const [chartLoading, setChartLoading] = useState(true);
+  const [chartInterval, setChartInterval] = useState<'1h' | '4h' | '1d'>('1h');
+  const [showIndicators, setShowIndicators] = useState(true);
 
-  useEffect(() => {
-    if (isOpen && token) {
-      // Simulate chart data - in a real app, you'd fetch this from an API
-      generateMockChartData();
-    }
-  }, [isOpen, token]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const generateMockChartData = () => {
-    const data = [];
-    const now = Date.now();
-    const basePrice = token?.price || 1;
-    
-    for (let i = 24; i >= 0; i--) {
-      const time = now - (i * 60 * 60 * 1000); // 24 hours ago to now
-      const randomChange = (Math.random() - 0.5) * 0.1; // ±5% change
-      const price = basePrice * (1 + randomChange);
-      const volume = (token?.volume_24h || 1000000) * (0.5 + Math.random() * 1);
-      
-      data.push({
-        time,
-        price,
-        volume
-      });
-    }
-    setChartData(data);
+  // Validate Solana address format
+  const isValidSolanaAddress = (address: string): boolean => {
+    return Boolean(address && address.length >= 32 && address.length <= 44 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(address));
   };
+
+  // Fetch chart data when modal opens or interval changes
+  useEffect(() => {
+    if (!token?.mint_address || !isOpen) return;
+
+    // Skip if address is invalid
+    if (!isValidSolanaAddress(token.mint_address)) {
+      console.warn('Invalid mint address for chart:', token.mint_address);
+      setChartLoading(false);
+      return;
+    }
+
+    const fetchChartData = async () => {
+      setChartLoading(true);
+      try {
+        const nowSec = Math.floor(Date.now() / 1000);
+        // Adjust time range based on interval
+        const timeRanges = {
+          '1h': 24 * 3600, // 24 hours for 1h candles
+          '4h': 7 * 24 * 3600, // 7 days for 4h candles
+          '1d': 30 * 24 * 3600 // 30 days for 1d candles
+        };
+        const fromSec = nowSec - timeRanges[chartInterval];
+        
+        // For debugging: test with different addresses to isolate the problem
+        let addressToUse = token.mint_address;
+        let addressSource = 'token';
+        
+        if (!isValidSolanaAddress(token.mint_address)) {
+          console.warn('⚠️ Invalid token address format:', token.mint_address);
+          // Test with known good addresses
+          addressToUse = 'So11111111111111111111111111111111111111112'; // SOL
+          addressSource = 'SOL_fallback';
+        } else {
+          console.log('✅ Token address format is valid:', token.mint_address);
+        }
+        
+        // Test with multiple known good addresses for debugging
+        const testAddresses = [
+          { addr: 'So11111111111111111111111111111111111111112', name: 'SOL' },
+          { addr: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', name: 'USDC' },
+          { addr: token.mint_address, name: `${token.symbol} (original)` }
+        ];
+        
+        console.log('🔍 Will test chart with address:', addressToUse, `(${addressSource})`);
+        console.log('📋 Available test addresses:', testAddresses);
+        
+        console.log('📊 Fetching OHLCV data with:', {
+          address: addressToUse,
+          interval: chartInterval,
+          fromSec,
+          toSec: nowSec,
+          timeRange: `${(nowSec - fromSec) / 3600} hours`
+        });
+        
+        const data = await fetchOHLCV(addressToUse, chartInterval, fromSec, nowSec);
+        
+        if (data && data.length > 0) {
+          const chartData = data
+            .map(bar => ({
+              time: bar.t as UTCTimestamp,
+              open: bar.o,
+              high: bar.h,
+              low: bar.l,
+              close: bar.c,
+              volume: bar.v || 0
+            }))
+            .sort((a, b) => (a.time as number) - (b.time as number));
+          
+          console.log('🔍 TokenDetailModal: Setting chart data:', {
+            rawDataLength: data.length,
+            chartDataLength: chartData.length,
+            firstChartData: chartData[0],
+            lastChartData: chartData[chartData.length - 1]
+          });
+          
+          setChartData(chartData);
+        } else {
+          console.log('❌ TokenDetailModal: No data to set');
+          setChartData([]);
+        }
+      } catch (error) {
+        console.error('Error fetching chart data:', error);
+        setChartData([]); // Clear any existing data on error
+      } finally {
+        setChartLoading(false);
+      }
+    };
+
+    fetchChartData();
+  }, [token?.mint_address, isOpen, chartInterval]);
+
+  if (!isOpen || !token) return null;
+
+  // Debug logging
+  console.log('🔍 TokenDetailModal - Token Data:', {
+    id: token.id,
+    name: token.name,
+    symbol: token.symbol,
+    mint_address: token.mint_address,
+    mint_addressLength: token.mint_address?.length || 0,
+    mint_addressType: typeof token.mint_address,
+    hasMintAddress: !!token.mint_address,
+    isMintAddressValid: token.mint_address && token.mint_address.length >= 32 && token.mint_address.length <= 44 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(token.mint_address),
+    mint_addressStartsWith: token.mint_address?.slice(0, 10),
+    mint_addressEndsWith: token.mint_address?.slice(-10)
+  });
+
+  // Additional debug info when trying to fetch chart data
+  console.log('🔍 Attempting to fetch chart data for:', {
+    token_symbol: token.symbol,
+    mint_address: token.mint_address,
+    is_valid_solana_address: isValidSolanaAddress(token.mint_address),
+    modal_is_open: isOpen
+  });
 
   const formatPrice = (price?: number) => {
     if (!price) return 'N/A';
@@ -93,8 +190,6 @@ export default function TokenDetailModal({ token, isOpen, onClose }: TokenDetail
     if (diffHours < 24) return `${diffHours}h ago`;
     return `${Math.floor(diffHours / 24)}d ago`;
   };
-
-  if (!isOpen || !token) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -174,7 +269,7 @@ export default function TokenDetailModal({ token, isOpen, onClose }: TokenDetail
                 <div className="space-y-3">
                   <div>
                     <span className="text-gray-400 text-sm">Mint Address</span>
-                    <p className="text-xs font-mono text-gray-300 break-all mt-1">{token.address}</p>
+                    <p className="text-xs font-mono text-gray-300 break-all mt-1">{token.mint_address}</p>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Last Updated</span>
@@ -204,26 +299,53 @@ export default function TokenDetailModal({ token, isOpen, onClose }: TokenDetail
             <div className="lg:col-span-2 space-y-4">
               {/* Price Chart */}
               <div className="bg-[#1a1a1f]/60 rounded-xl p-4 border border-[#2a2a2e]/30">
-                <h3 className="text-sm text-gray-400 uppercase tracking-widest mb-4">24h Price Chart</h3>
-                {isLoading ? (
-                  <div className="flex items-center justify-center h-48">
-                    <div className="text-gray-400">Loading chart...</div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm text-gray-400 uppercase tracking-widest">Price Chart</h3>
+                  <div className="flex items-center gap-3">
+                    {/* Interval Selector */}
+                    <div className="flex bg-[#2a2a2e]/50 rounded-lg p-1">
+                      {(['1h', '4h', '1d'] as const).map((interval) => (
+                        <button
+                          key={interval}
+                          onClick={() => setChartInterval(interval)}
+                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                            chartInterval === interval
+                              ? 'bg-glowBlue text-white'
+                              : 'text-gray-400 hover:text-gray-300'
+                          }`}
+                        >
+                          {interval}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Indicator Toggle */}
+                    <button
+                      onClick={() => setShowIndicators(!showIndicators)}
+                      className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+                        showIndicators
+                          ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                          : 'bg-[#2a2a2e]/50 text-gray-400 hover:text-gray-300'
+                      }`}
+                    >
+                      SMA
+                    </button>
                   </div>
-                ) : (
-                  <TokenChart data={chartData} height={200} type="price" />
-                )}
-              </div>
-
-              {/* Volume Chart */}
-              <div className="bg-[#1a1a1f]/60 rounded-xl p-4 border border-[#2a2a2e]/30">
-                <h3 className="text-sm text-gray-400 uppercase tracking-widest mb-4">24h Volume Chart</h3>
-                {isLoading ? (
-                  <div className="flex items-center justify-center h-48">
-                    <div className="text-gray-400">Loading chart...</div>
-                  </div>
-                ) : (
-                  <TokenChart data={chartData} height={200} type="volume" />
-                )}
+                </div>
+                <div className="h-80">
+                  {chartLoading ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-gray-400 text-sm">Loading chart data...</div>
+                    </div>
+                  ) : (
+                    <TokenChart 
+                      data={chartData}
+                      height={320}
+                      showVolume={true}
+                      showIndicators={showIndicators}
+                      theme="dark"
+                    />
+                  )}
+                </div>
               </div>
             </div>
           </div>

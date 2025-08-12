@@ -1,5 +1,9 @@
+'use client'
+
 import Sidebar from "@/components/Sidebar";
 import WatchlistManager from "@/components/WatchlistManager";
+
+export const dynamic = 'force-dynamic'
 
 export default function MyWatchlistsPage() {
   return (

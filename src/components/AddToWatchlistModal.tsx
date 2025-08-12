@@ -17,7 +17,7 @@ interface AddToWatchlistModalProps {
   token: {
     symbol: string
     name: string
-    address: string
+    mint_address: string
   } | null
 }
 
@@ -76,7 +76,7 @@ export default function AddToWatchlistModal({ isOpen, onClose, token }: AddToWat
         body: JSON.stringify({
           tokens: [{
             watchlist_id: selectedWatchlistId,
-            token_address: token.address,
+            token_address: token.mint_address,
             added_at: new Date().toISOString()
           }]
         })
@@ -203,3 +203,4 @@ export default function AddToWatchlistModal({ isOpen, onClose, token }: AddToWat
     </div>
   )
 }
+

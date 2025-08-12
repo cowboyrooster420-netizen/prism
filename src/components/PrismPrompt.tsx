@@ -8,7 +8,7 @@ interface Token {
   id: string | number
   name: string
   symbol: string
-  address: string
+  mint_address: string
   price?: number
   price_change_24h?: number
   volume_24h?: number

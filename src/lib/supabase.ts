@@ -1,11 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
 
+// Security Note: This file only uses ANON key, never the service role key
+// Admin operations are handled in supabase-admin.ts (server-side only)
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-// Regular client for user operations (uses anon key)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing required Supabase environment variables');
+}
 
-// Admin client for creating tables and managing users (uses service role key)
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey) 
+// Client for user operations (uses anon key with RLS enabled)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey) 

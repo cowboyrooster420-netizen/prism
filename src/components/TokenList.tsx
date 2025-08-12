@@ -7,7 +7,7 @@ interface Token {
   id: string | number
   name: string
   symbol: string
-  address: string
+  mint_address: string
   price?: number
   price_change_24h?: number
   volume_24h?: number
@@ -23,7 +23,7 @@ const validateToken = (token: any): token is Token => {
     (typeof token.id === 'string' || typeof token.id === 'number') &&
     typeof token.name === 'string' &&
     typeof token.symbol === 'string' &&
-    typeof token.address === 'string' &&
+    typeof token.mint_address === 'string' &&
     (token.price === undefined || typeof token.price === 'number') &&
     (token.price_change_24h === undefined || typeof token.price_change_24h === 'number') &&
     (token.volume_24h === undefined || typeof token.volume_24h === 'number') &&

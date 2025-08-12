@@ -10,48 +10,89 @@ type Opts = {
 };
 
 export function useBirdeyeCandles(container: HTMLDivElement | null, {
-  address,
-  interval = '1m',
-  lookbackSec = 60 * 60 * 24,
-  pollMs = 3000,
-}: Opts) {
+  address, 
+  interval = '1m', 
+  lookbackSec = 24*3600, 
+  pollMs = 3000 
+}: {
+  address: string;            // token mint
+  interval?: Interval;        // chart timeframe
+  lookbackSec?: number;      // how far back to fetch
+  pollMs?: number;           // polling interval
+}) {
   const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
   const pollRef = useRef<number | null>(null);
 
+  // Validate Solana address format
+  const isValidSolanaAddress = (addr: string): boolean => {
+    // Solana addresses are base58 encoded and typically 32-44 characters long
+    return Boolean(addr && addr.length >= 32 && addr.length <= 44 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(addr));
+  };
+
   useEffect(() => {
-    console.log('useBirdeyeCandles effect triggered:', { container, address, interval });
-    
+    console.log('🔍 useBirdeyeCandles - Effect triggered:', {
+      container: Boolean(container),
+      containerElement: container,
+      address,
+      addressLength: address?.length || 0,
+      isValidAddress: Boolean(isValidSolanaAddress(address)),
+      interval,
+      lookbackSec,
+      pollMs
+    });
+
     if (!container || !address) {
-      console.log('Early return - no container or address:', { container: !!container, address: !!address });
+      console.log('❌ useBirdeyeCandles: No container or address provided');
       return;
     }
 
-    console.log('Starting chart creation...');
+    // Validate address before proceeding
+    if (!isValidSolanaAddress(address)) {
+      console.error('❌ Invalid Solana address provided to useBirdeyeCandles:', address);
+      console.error('Address must be a valid Solana mint address (32-44 characters, base58 encoded)');
+      return;
+    }
+
+    console.log('✅ useBirdeyeCandles: All validations passed, creating chart...');
 
     try {
-      // 1) Create chart
-      console.log('Creating chart with container:', container);
-      const chart = createChart(container, {
+      console.log('🔍 Creating chart with container:', container);
+      console.log('🔍 Container dimensions:', {
+        width: container.offsetWidth,
+        height: container.offsetHeight,
+        clientWidth: container.clientWidth,
+        clientHeight: container.clientHeight
+      });
+      
+      const chartOptions = {
         layout: { background: { type: ColorType.Solid, color: 'transparent' }, textColor: '#AAB2C0' },
         grid: { vertLines: { visible: false }, horzLines: { visible: false } },
         rightPriceScale: { borderVisible: false },
         timeScale: { borderVisible: false, rightOffset: 6, barSpacing: 8 },
         crosshair: { mode: 1 },
-      });
-      console.log('Chart created successfully:', chart);
+        width: container.offsetWidth || 800,
+        height: container.offsetHeight || 400,
+      };
+      console.log('🔍 Chart options:', chartOptions);
+      
+      const chart = createChart(container, chartOptions);
+      console.log('✅ Chart created successfully:', chart);
       
       const series = chart.addSeries(CandlestickSeries);
-      console.log('Candlestick series added:', series);
+      console.log('✅ Candlestick series added:', series);
       
       chartRef.current = chart;
 
       // 2) Load initial history on demand
       (async () => {
         try {
-          console.log('Fetching initial data from Birdeye...');
+          console.log('🔍 Fetching initial data from Birdeye...');
           const nowSec = Math.floor(Date.now() / 1000);
-          const data = await fetchOHLCV(address, interval, nowSec - lookbackSec, nowSec);
-          console.log('Birdeye data received:', data);
+          const fromSec = nowSec - lookbackSec;
+          console.log('🔍 Time range:', { from: new Date(fromSec * 1000), to: new Date(nowSec * 1000) });
+          
+          const data = await fetchOHLCV(address, interval, fromSec, nowSec);
+          console.log('✅ Birdeye data received:', data);
           
           if (data && data.length > 0) {
             const bars = data.map(b => ({
@@ -59,16 +100,16 @@ export function useBirdeyeCandles(container: HTMLDivElement | null, {
               open: b.o, high: b.h, low: b.l, close: b.c,
             }));
             bars.sort((a, b) => (a.time as number) - (b.time as number));
-            console.log('Setting chart data:', bars);
+            console.log('🔍 Setting chart data:', bars);
             series.setData(bars);
             chart.timeScale().fitContent();
-            console.log('Chart data set successfully');
+            console.log('✅ Chart data set successfully');
           } else {
-            console.warn('No data received from Birdeye');
+            console.warn('⚠️ No data received from Birdeye');
           }
         } catch (error) {
-          console.error('Error fetching initial data:', error);
-          console.error('Error details:', {
+          console.error('❌ Error fetching initial data:', error);
+          console.error('❌ Error details:', {
             message: error instanceof Error ? error.message : String(error),
             error: error
           });
@@ -88,21 +129,30 @@ export function useBirdeyeCandles(container: HTMLDivElement | null, {
             open: last.o, high: last.h, low: last.l, close: last.c,
           });
         } catch (e) { 
-          console.error('Polling error:', e);
+          console.error('❌ Polling error:', e);
         }
       };
       pollRef.current = window.setInterval(tick, pollMs);
-      console.log('Polling started');
+      console.log('✅ Polling started');
 
       // 4) Cleanup on unmount or when address/interval changes
       return () => {
-        console.log('Cleaning up chart...');
-        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-        chart.remove();
-        chartRef.current = null;
+        console.log('🧹 Cleaning up chart...');
+        if (pollRef.current) { 
+          clearInterval(pollRef.current); 
+          pollRef.current = null; 
+        }
+        if (chartRef.current) {
+          chartRef.current.remove();
+          chartRef.current = null;
+        }
       };
     } catch (error) {
-      console.error('Error in chart creation:', error);
+      console.error('❌ Error in chart creation:', error);
+      console.error('❌ Chart creation error details:', {
+        message: error instanceof Error ? error.message : String(error),
+        error: error
+      });
     }
   }, [container, address, interval, lookbackSec, pollMs]);
 }

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { X, Search, Plus, Star } from 'lucide-react'
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, X, Search, Loader2 } from 'lucide-react';
 
 interface Watchlist {
   id: string
@@ -14,7 +14,7 @@ interface Watchlist {
 }
 
 interface Token {
-  address: string
+  mint_address: string
   name: string
   symbol: string
   price?: number
@@ -33,19 +33,11 @@ interface AddTokenModalProps {
 export default function AddTokenModal({ isOpen, onClose, watchlist, onTokenAdded }: AddTokenModalProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Token[]>([])
-  const [isSearching, setIsSearching] = useState(false)
   const [selectedTokens, setSelectedTokens] = useState<Set<string>>(new Set())
+  const [isSearching, setIsSearching] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
 
-  useEffect(() => {
-    if (searchQuery.trim()) {
-      searchTokens()
-    } else {
-      setSearchResults([])
-    }
-  }, [searchQuery])
-
-  const searchTokens = async () => {
+  const searchTokens = useCallback(async () => {
     if (!searchQuery.trim()) return
 
     setIsSearching(true)
@@ -67,7 +59,15 @@ export default function AddTokenModal({ isOpen, onClose, watchlist, onTokenAdded
     } finally {
       setIsSearching(false)
     }
-  }
+  }, [searchQuery])
+
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      searchTokens();
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchQuery, searchTokens]);
 
   const handleTokenToggle = (tokenAddress: string) => {
     const newSelected = new Set(selectedTokens)
@@ -84,9 +84,9 @@ export default function AddTokenModal({ isOpen, onClose, watchlist, onTokenAdded
 
     setIsAdding(true)
     try {
-      const tokensToAdd = Array.from(selectedTokens).map(address => ({
+      const tokensToAdd = Array.from(selectedTokens).map(mintAddress => ({
         watchlist_id: watchlist.id,
-        token_address: address,
+        token_mint_address: mintAddress,
       }))
 
       const response = await fetch('/api/watchlists/tokens', {
@@ -188,21 +188,21 @@ export default function AddTokenModal({ isOpen, onClose, watchlist, onTokenAdded
               
               {searchResults.map((token) => (
                 <div
-                  key={token.address}
+                  key={token.mint_address}
                   className={`flex items-center justify-between p-3 rounded-lg border transition-colors cursor-pointer ${
-                    selectedTokens.has(token.address)
+                    selectedTokens.has(token.mint_address)
                       ? 'border-glowBlue/50 bg-glowBlue/10'
                       : 'border-[#2a2a2e]/30 hover:border-[#2a2a2e] hover:bg-white/5'
                   }`}
-                  onClick={() => handleTokenToggle(token.address)}
+                  onClick={() => handleTokenToggle(token.mint_address)}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-4 h-4 rounded-full border-2 transition-colors ${
-                      selectedTokens.has(token.address)
+                      selectedTokens.has(token.mint_address)
                         ? 'border-glowBlue bg-glowBlue'
                         : 'border-gray-500'
                     }`}>
-                      {selectedTokens.has(token.address) && (
+                      {selectedTokens.has(token.mint_address) && (
                         <div className="w-full h-full flex items-center justify-center">
                           <div className="w-2 h-2 bg-white rounded-full" />
                         </div>

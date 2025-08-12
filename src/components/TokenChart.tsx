@@ -1,145 +1,229 @@
 'use client'
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { createChart, ColorType, CandlestickSeries, HistogramSeries, LineSeries, UTCTimestamp } from 'lightweight-charts';
 
 interface ChartData {
-  time: number;
-  price: number;
-  volume: number;
+  time: UTCTimestamp;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number;
 }
 
 interface TokenChartProps {
   data: ChartData[];
   height?: number;
-  type?: 'price' | 'volume';
+  showVolume?: boolean;
+  showIndicators?: boolean;
+  theme?: 'dark' | 'light';
 }
 
-export default function TokenChart({ data, height = 200, type = 'price' }: TokenChartProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+export default function TokenChart({ 
+  data, 
+  height = 200, 
+  showVolume = true, 
+  showIndicators = true,
+  theme = 'dark'
+}: TokenChartProps) {
+  
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(false); // Set to false immediately for testing
+  const chartRef = useRef<any>(null);
 
-  useEffect(() => {
-    if (!canvasRef.current || data.length === 0) return;
+  // Callback ref to handle container availability
+  const setChartContainer = useCallback((element: HTMLDivElement | null) => {
+    chartContainerRef.current = element;
+    
+    if (element) {
+      // Trigger chart creation immediately when container is available
+      createChartInContainer(element);
+    }
+  }, [data, height, showVolume, showIndicators, theme]);
 
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Set canvas size
-    canvas.width = canvas.offsetWidth * 2;
-    canvas.height = height * 2;
-    ctx.scale(2, 2);
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const width = canvas.offsetWidth;
-    const padding = 20;
-
-    // Get data range
-    const values = data.map(d => type === 'price' ? d.price : d.volume);
-    const minValue = Math.min(...values);
-    const maxValue = Math.max(...values);
-    const range = maxValue - minValue;
-
-    // Draw grid
-    ctx.strokeStyle = '#2a2a2e';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([2, 2]);
-
-    // Vertical grid lines
-    for (let i = 0; i <= 5; i++) {
-      const x = padding + (width - 2 * padding) * (i / 5);
-      ctx.beginPath();
-      ctx.moveTo(x, padding);
-      ctx.lineTo(x, height - padding);
-      ctx.stroke();
+  const createChartInContainer = useCallback((container: HTMLDivElement) => {
+    
+    // Clean up existing chart safely
+    if (chartRef.current) {
+      try {
+        chartRef.current.remove();
+      } catch (e) {
+        console.warn('Chart already disposed:', e);
+      }
+      chartRef.current = null;
     }
 
-    // Horizontal grid lines
-    for (let i = 0; i <= 4; i++) {
-      const y = padding + (height - 2 * padding) * (i / 4);
-      ctx.beginPath();
-      ctx.moveTo(padding, y);
-      ctx.lineTo(width - padding, y);
-      ctx.stroke();
-    }
+    // For testing: use hardcoded data if no data provided
+    const testData = [
+      { time: 1726670700 as UTCTimestamp, open: 128, high: 129, low: 127, close: 128.5, volume: 1000 },
+      { time: 1726671600 as UTCTimestamp, open: 128.5, high: 130, low: 128, close: 129, volume: 1200 },
+      { time: 1726672500 as UTCTimestamp, open: 129, high: 131, low: 128.5, close: 130, volume: 900 }
+    ];
 
-    ctx.setLineDash([]);
+    const dataToUse = data.length > 0 ? data : testData;
 
-    // Draw chart line
-    if (data.length > 1) {
-      ctx.strokeStyle = type === 'price' ? '#3bb0ff' : '#3bff75';
-      ctx.lineWidth = 2;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+    // Create chart
+    const chart = createChart(container, {
+      layout: {
+        background: { type: ColorType.Solid, color: 'transparent' },
+        textColor: theme === 'dark' ? '#ffffff' : '#000000',
+      },
+      grid: {
+        vertLines: { color: theme === 'dark' ? '#2a2a2e' : '#e5e7eb' },
+        horzLines: { color: theme === 'dark' ? '#2a2a2e' : '#e5e7eb' },
+      },
+      crosshair: {
+        mode: 1,
+        vertLine: {
+          color: '#3bb0ff',
+          width: 1,
+          style: 3,
+        },
+        horzLine: {
+          color: '#3bb0ff',
+          width: 1,
+          style: 3,
+        },
+      },
+      rightPriceScale: {
+        borderColor: theme === 'dark' ? '#2a2a2e' : '#e5e7eb',
+        scaleMargins: {
+          top: 0.1,
+          bottom: 0.1,
+        },
+      },
+      timeScale: {
+        borderColor: theme === 'dark' ? '#2a2a2e' : '#e5e7eb',
+        timeVisible: true,
+        secondsVisible: false,
+      },
+      width: chartContainerRef.current.clientWidth,
+      height: height,
+    });
 
-      ctx.beginPath();
-      data.forEach((point, index) => {
-        const x = padding + (width - 2 * padding) * (index / (data.length - 1));
-        const y = height - padding - ((point[type === 'price' ? 'price' : 'volume'] - minValue) / range) * (height - 2 * padding);
-        
-        if (index === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
+
+    // Add candlestick series
+    const candlestickChartSeries = chart.addSeries(CandlestickSeries, {
+      upColor: '#3bff75',
+      downColor: '#ff6b6b',
+      borderDownColor: '#ff6b6b',
+      borderUpColor: '#3bff75',
+      wickDownColor: '#ff6b6b',
+      wickUpColor: '#3bff75',
+    });
+
+    // Volume series will be added below with data
+
+    // Add SMA indicator if enabled
+    if (showIndicators && dataToUse.length > 2) {  // Use smaller threshold for test
+      const smaData = calculateSMA(dataToUse, Math.min(dataToUse.length, 20));
+      const smaChartSeries = chart.addSeries(LineSeries, {
+        color: '#8b5cf6',
+        lineWidth: 2,
+        priceLineVisible: false,
       });
-      ctx.stroke();
-
-      // Fill area under line
-      ctx.fillStyle = type === 'price' ? '#3bb0ff20' : '#3bff7520';
-      ctx.lineTo(width - padding, height - padding);
-      ctx.lineTo(padding, height - padding);
-      ctx.closePath();
-      ctx.fill();
+      smaChartSeries.setData(smaData);
     }
 
-    // Draw data points
-    ctx.fillStyle = type === 'price' ? '#3bb0ff' : '#3bff75';
-    data.forEach((point, index) => {
-      const x = padding + (width - 2 * padding) * (index / (data.length - 1));
-      const y = height - padding - ((point[type === 'price' ? 'price' : 'volume'] - minValue) / range) * (height - 2 * padding);
+    // Set data
+    candlestickChartSeries.setData(dataToUse);
+    
+    if (showVolume) {
+      const volumeData = dataToUse.map(d => ({
+        time: d.time,
+        value: d.volume || 0,
+        color: d.close >= d.open ? '#3bff75' : '#ff6b6b',
+      }));
+      const volumeSeries = chart.addSeries(HistogramSeries, {
+        color: '#3bb0ff',
+        priceFormat: { type: 'volume' },
+        priceScaleId: 'volume',
+      });
+      volumeSeries.setData(volumeData);
       
-      ctx.beginPath();
-      ctx.arc(x, y, 2, 0, 2 * Math.PI);
-      ctx.fill();
-    });
-
-    // Draw labels
-    ctx.fillStyle = '#666';
-    ctx.font = '10px Inter';
-    ctx.textAlign = 'center';
-
-    // Y-axis labels
-    for (let i = 0; i <= 4; i++) {
-      const y = padding + (height - 2 * padding) * (i / 4);
-      const value = maxValue - (range * i / 4);
-      const label = type === 'price' 
-        ? `$${value.toFixed(4)}`
-        : value >= 1000000 
-          ? `$${(value / 1000000).toFixed(1)}M`
-          : `$${(value / 1000).toFixed(0)}K`;
-      
-      ctx.fillText(label, padding - 5, y + 3);
+      // Set scale margins for the volume scale
+      chart.priceScale('volume').applyOptions({
+        scaleMargins: {
+          top: 0.7,
+          bottom: 0,
+        },
+      });
     }
 
-    // X-axis labels (time)
-    ctx.textAlign = 'center';
-    const timeLabels = ['24h ago', '18h ago', '12h ago', '6h ago', 'Now'];
-    timeLabels.forEach((label, i) => {
-      const x = padding + (width - 2 * padding) * (i / 4);
-      ctx.fillText(label, x, height - 5);
-    });
 
-  }, [data, height, type]);
+    // Handle resize
+    const handleResize = () => {
+      if (chartContainerRef.current && chartRef.current) {
+        try {
+          chartRef.current.applyOptions({ 
+            width: chartContainerRef.current.clientWidth 
+          });
+        } catch (e) {
+          console.warn('Chart disposed during resize:', e);
+        }
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    setIsLoading(false);
+    
+    // Store chart reference and resize handler for cleanup
+    chartRef.current = chart;
+    
+    // Return cleanup function for resize listener
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [data, height, showVolume, showIndicators, theme]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (chartRef.current) {
+        try {
+          chartRef.current.remove();
+        } catch (e) {
+          console.warn('Chart already disposed on unmount:', e);
+        }
+        chartRef.current = null;
+      }
+    };
+  }, []);
+
+  // Calculate Simple Moving Average
+  const calculateSMA = (data: ChartData[], period: number) => {
+    const smaData = [];
+    
+    for (let i = period - 1; i < data.length; i++) {
+      const sum = data.slice(i - period + 1, i + 1).reduce((acc, d) => acc + d.close, 0);
+      const average = sum / period;
+      smaData.push({
+        time: data[i].time,
+        value: average,
+      });
+    }
+    
+    return smaData;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center" style={{ height: `${height}px` }}>
+        <div className="text-gray-400 text-sm">Loading chart...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
-      <canvas
-        ref={canvasRef}
-        className="w-full"
-        style={{ height: `${height}px` }}
-      />
+      <div ref={setChartContainer} className="w-full" style={{ height: `${height}px` }} />
+      {showIndicators && data.length > 0 && (
+        <div className="absolute top-2 left-2 text-xs text-gray-400">
+          <span className="inline-block w-3 h-0.5 bg-purple-500 mr-1"></span>
+          SMA(20)
+        </div>
+      )}
     </div>
   );
 } 
