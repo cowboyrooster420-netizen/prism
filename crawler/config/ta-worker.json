@@ -1,0 +1,85 @@
+{
+  "technicalAnalysis": {
+    "smaPeriods": [7, 20, 50, 200],
+    "emaPeriods": [7, 20, 50, 200],
+    "rsiPeriod": 14,
+    "rsiOverbought": 70,
+    "rsiOversold": 30,
+    "macdFastPeriod": 12,
+    "macdSlowPeriod": 26,
+    "macdSignalPeriod": 9,
+    "atrPeriod": 14,
+    "bbPeriod": 20,
+    "bbStandardDeviations": 2,
+    "donchianPeriod": 20,
+    "volumeMAPeriod": 20,
+    "volumeZScorePeriod": 60,
+    "volumeSlopePeriod": 6,
+    "swingDetectionWindow": 2,
+    "minCandlesRequired": 60,
+    "minDataQuality": 0.8
+  },
+  "performance": {
+    "maxWorkers": 4,
+    "workerTimeout": 30000,
+    "batchSize": 250,
+    "maxConcurrency": 3,
+    "maxMemoryUsage": 1073741824,
+    "gcThreshold": 0.8,
+    "enableMetrics": true,
+    "metricsInterval": 5000
+  },
+  "database": {
+    "connectionTimeout": 10000,
+    "queryTimeout": 30000,
+    "maxConnections": 10,
+    "maxRetries": 3,
+    "retryDelay": 1000,
+    "upsertBatchSize": 250,
+    "fetchBatchSize": 300,
+    "enableConnectionPooling": true,
+    "poolSize": 5
+  },
+  "errorHandling": {
+    "maxRetryAttempts": 3,
+    "baseRetryDelay": 1000,
+    "maxRetryDelay": 30000,
+    "retryBackoffMultiplier": 2,
+    "circuitBreakerThreshold": 5,
+    "circuitBreakerTimeout": 60000,
+    "circuitBreakerMonitoringWindow": 60000,
+    "criticalErrorThreshold": 0.1,
+    "highErrorThreshold": 0.2,
+    "enableAutomaticRecovery": true,
+    "maxRecoveryAttempts": 3
+  },
+  "logging": {
+    "level": "info",
+    "enableConsole": true,
+    "enableFile": true,
+    "logFilePath": "./logs/ta-worker.log",
+    "maxLogFileSize": 10485760,
+    "maxLogFiles": 5,
+    "enableStructuredLogging": true,
+    "includeTimestamp": true,
+    "includeContext": true
+  },
+  "monitoring": {
+    "enableHealthChecks": true,
+    "healthCheckInterval": 30000,
+    "enableMetrics": true,
+    "metricsPort": 8080,
+    "metricsEndpoint": "/metrics",
+    "enableAlerts": false,
+    "alertThresholds": {
+      "errorRate": 0.1,
+      "responseTime": 5000,
+      "memoryUsage": 0.8
+    },
+    "enableProfiling": false,
+    "profileThreshold": 1000
+  },
+  "environment": "staging",
+  "version": "1.0.0",
+  "lastUpdated": "2024-01-01T00:00:00.000Z"
+}

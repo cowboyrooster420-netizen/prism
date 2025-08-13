@@ -1,0 +1,165 @@
+{
+  "mlQuality": {
+    "modelType": "ensemble",
+    "trainingWindow": 30,
+    "predictionHorizon": 24,
+    "confidenceThreshold": 0.75,
+    "updateFrequency": 168,
+    
+    "featureEngineering": {
+      "enableTechnicalIndicators": true,
+      "enableStatisticalFeatures": true,
+      "enableTemporalFeatures": true,
+      "enableCrossTokenFeatures": true
+    },
+    
+    "anomalyDetection": {
+      "enableUnsupervised": true,
+      "enableSupervised": true,
+      "enableReinforcement": true
+    },
+    
+    "modelConfigurations": {
+      "isolation_forest": {
+        "nEstimators": 100,
+        "contamination": 0.1,
+        "randomState": 42,
+        "maxFeatures": 1.0,
+        "bootstrap": false
+      },
+      
+      "autoencoder": {
+        "encodingDim": 32,
+        "hiddenLayers": [64, 32],
+        "dropoutRate": 0.2,
+        "learningRate": 0.001,
+        "batchSize": 32,
+        "epochs": 100
+      },
+      
+      "lstm": {
+        "sequenceLength": 50,
+        "hiddenUnits": [64, 32],
+        "dropoutRate": 0.2,
+        "learningRate": 0.001,
+        "batchSize": 32,
+        "epochs": 100,
+        "bidirectional": true
+      },
+      
+      "ensemble": {
+        "votingMethod": "weighted",
+        "modelWeights": {
+          "isolation_forest": 0.3,
+          "autoencoder": 0.4,
+          "lstm": 0.3
+        },
+        "consensusThreshold": 0.6
+      }
+    },
+    
+    "training": {
+      "dataSplit": {
+        "training": 0.7,
+        "validation": 0.2,
+        "testing": 0.1
+      },
+      "crossValidation": {
+        "folds": 5,
+        "stratified": true
+      },
+      "earlyStopping": {
+        "patience": 10,
+        "minDelta": 0.001
+      },
+      "hyperparameterTuning": {
+        "method": "grid_search",
+        "paramGrid": {
+          "learningRate": [0.001, 0.01, 0.1],
+          "hiddenUnits": [[32], [64], [32, 16]],
+          "dropoutRate": [0.1, 0.2, 0.3]
+        }
+      }
+    },
+    
+    "featureSelection": {
+      "method": "mutual_info",
+      "topK": 50,
+      "correlationThreshold": 0.95,
+      "varianceThreshold": 0.01
+    },
+    
+    "dataPreprocessing": {
+      "normalization": "standard_scaler",
+      "handlingMissingValues": "interpolation",
+      "outlierRemoval": "iqr",
+      "featureScaling": "robust_scaler"
+    },
+    
+    "performanceMonitoring": {
+      "metrics": ["accuracy", "precision", "recall", "f1_score", "auc"],
+      "thresholds": {
+        "minAccuracy": 0.75,
+        "minPrecision": 0.7,
+        "minRecall": 0.7,
+        "minF1Score": 0.7
+      },
+      "driftDetection": {
+        "enabled": true,
+        "method": "ks_test",
+        "windowSize": 1000,
+        "threshold": 0.05
+      }
+    },
+    
+    "modelPersistence": {
+      "saveBestModel": true,
+      "modelFormat": "onnx",
+      "versioning": true,
+      "backupCount": 5,
+      "compression": true
+    },
+    
+    "inference": {
+      "batchSize": 64,
+      "enableGPU": false,
+      "optimization": "tensorrt",
+      "caching": true,
+      "maxConcurrentRequests": 100
+    },
+    
+    "alerting": {
+      "modelPerformance": {
+        "accuracyDrop": 0.1,
+        "trainingFailure": true,
+        "inferenceTimeout": 5.0
+      },
+      "dataQuality": {
+        "predictionConfidence": 0.5,
+        "anomalySeverity": "high",
+        "riskFactorImpact": "critical"
+      }
+    },
+    
+    "environments": {
+      "development": {
+        "modelType": "isolation_forest",
+        "trainingWindow": 7,
+        "updateFrequency": 24,
+        "enableGPU": false
+      },
+      "staging": {
+        "modelType": "autoencoder",
+        "trainingWindow": 14,
+        "updateFrequency": 72,
+        "enableGPU": false
+      },
+      "production": {
+        "modelType": "ensemble",
+        "trainingWindow": 30,
+        "updateFrequency": 168,
+        "enableGPU": true
+      }
+    }
+  }
+}

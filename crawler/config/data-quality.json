@@ -1,0 +1,76 @@
+{
+  "dataQuality": {
+    "enableRealTimeValidation": true,
+    "enableAnomalyDetection": true,
+    "enableQualityMetrics": true,
+    "enableIntegrityMonitoring": true,
+    
+    "validationThresholds": {
+      "minQualityScore": 75,
+      "maxErrorRate": 0.05,
+      "maxWarningRate": 0.15
+    },
+    
+    "anomalyDetection": {
+      "enablePriceAnomalies": true,
+      "enableVolumeAnomalies": true,
+      "enableDataGapDetection": true,
+      "confidenceThreshold": 0.7
+    },
+    
+    "monitoring": {
+      "enableRealTimeAlerts": true,
+      "enableQualityReports": true,
+      "enableTrendAnalysis": true
+    },
+    
+    "candleValidation": {
+      "strictMode": true,
+      "allowFutureTimestamps": false,
+      "maxPriceDeviation": 0.5,
+      "minVolumeThreshold": 0.001,
+      "requireCompleteData": true
+    },
+    
+    "featureValidation": {
+      "validateIndicators": true,
+      "validateRelationships": true,
+      "checkValueRanges": true,
+      "validateTimeConsistency": true
+    },
+    
+    "integrityChecks": {
+      "schemaValidation": true,
+      "businessRules": true,
+      "dataRelationships": true,
+      "crossReferenceValidation": true
+    },
+    
+    "qualityScoring": {
+      "errorWeight": 10,
+      "warningWeight": 2,
+      "anomalyWeights": {
+        "critical": 20,
+        "high": 15,
+        "medium": 10,
+        "low": 5
+      },
+      "integrityViolationWeight": 15
+    },
+    
+    "reporting": {
+      "generateQualityReports": true,
+      "reportFrequency": "hourly",
+      "includeTrends": true,
+      "includeRecommendations": true,
+      "exportFormats": ["json", "csv"]
+    },
+    
+    "alerting": {
+      "qualityThreshold": 80,
+      "errorRateThreshold": 0.1,
+      "anomalyThreshold": 5,
+      "notificationChannels": ["log", "metrics"]
+    }
+  }
+}
