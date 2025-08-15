@@ -25,7 +25,7 @@ export default function Home() {
 
           <div className="flex-1 p-6 lg:p-8 flex flex-col">
             <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
-              {/* PrismPrompt takes up the full space */}
+              {/* PrismPrompt takes up the remaining space */}
               <div className="flex-1">
                 <PrismPrompt />
               </div>

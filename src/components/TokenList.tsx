@@ -14,6 +14,21 @@ interface Token {
   market_cap?: number
   liquidity?: number
   updated_at?: string
+  
+  // Behavioral metrics  
+  whale_buys_24h?: number
+  new_holders_24h?: number
+  volume_spike_ratio?: number
+  token_age_hours?: number
+  transaction_pattern_score?: number
+  smart_money_score?: number
+  
+  // Technical analysis (optional)
+  rsi14?: number
+  breakout_high_20?: boolean
+  near_breakout_high_20?: boolean
+  cross_ema7_over_ema20?: boolean
+  cross_ema50_over_ema200?: boolean
 }
 
 // Validate token data

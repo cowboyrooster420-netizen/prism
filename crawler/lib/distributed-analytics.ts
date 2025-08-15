@@ -1273,3 +1273,4 @@ export class DistributedAnalytics extends EventEmitter {
 export function createDistributedAnalytics(config: DistributedAnalyticsConfig): DistributedAnalytics {
   return new DistributedAnalytics(config);
 }
+

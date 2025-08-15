@@ -113,3 +113,4 @@ export class PerformanceProfiler extends EventEmitter {
     this.emit('profilesCleared');
   }
 }
+

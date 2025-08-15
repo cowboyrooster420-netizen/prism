@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import AddToWatchlistModal from './AddToWatchlistModal'
+import { analyzeTokenReasons, getColorClasses, type TokenWithBehavioral } from '../lib/tokenReasonAnalyzer'
 
 interface TokenCardProps {
   token: {
@@ -15,6 +16,21 @@ interface TokenCardProps {
     market_cap?: number;
     liquidity?: number;
     updated_at?: string;
+    
+    // Behavioral metrics
+    whale_buys_24h?: number;
+    new_holders_24h?: number;
+    volume_spike_ratio?: number;
+    token_age_hours?: number;
+    transaction_pattern_score?: number;
+    smart_money_score?: number;
+    
+    // Technical analysis (optional future data)
+    rsi14?: number;
+    breakout_high_20?: boolean;
+    near_breakout_high_20?: boolean;
+    cross_ema7_over_ema20?: boolean;
+    cross_ema50_over_ema200?: boolean;
   };
   onClick?: (token: TokenCardProps['token']) => void;
 }
@@ -23,6 +39,16 @@ export default function TokenCard({ token, onClick }: TokenCardProps) {
   const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState(false)
   
   const isPositive = (token.price_change_24h || 0) >= 0;
+  
+  // Analyze why this token is interesting (with error handling)
+  const tokenReasons = (() => {
+    try {
+      return typeof window !== 'undefined' ? analyzeTokenReasons(token as TokenWithBehavioral) : [];
+    } catch (error) {
+      console.warn('Token reason analysis failed:', error);
+      return [];
+    }
+  })();
   
   const formatPrice = (price?: number) => {
     if (!price) return 'N/A';
@@ -135,6 +161,24 @@ export default function TokenCard({ token, onClick }: TokenCardProps) {
           <div className="text-xs text-gray-500 mb-4">
             Updated: {getTimeAgo(token.updated_at)}
           </div>
+
+          {/* Smart Insights - Why this token is interesting */}
+          {tokenReasons && tokenReasons.length > 0 && (
+            <div className="bg-gradient-to-r from-[#1a1a1f]/40 to-[#0d0d0f]/40 rounded-lg border border-[#2a2a2e]/20 p-3 mb-4">
+              <div className="text-xs text-gray-400 mb-2 font-medium">Prism Insight</div>
+              <div className="space-y-1 text-xs">
+                {tokenReasons.map((reason, index) => {
+                  const colorClasses = getColorClasses(reason.color);
+                  return (
+                    <div key={index} className="flex items-center gap-2">
+                      <div className={`w-2 h-2 ${colorClasses.dot} rounded-full`}></div>
+                      <span className={`${colorClasses.text} font-medium`}>{reason.text}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Action buttons */}
           {onClick && (

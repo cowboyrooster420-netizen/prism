@@ -20,6 +20,7 @@ export default function Sidebar() {
           <NavItem icon={<Activity size={18} />} label="Trending" href="/" />
           <NavItem icon={<Brain size={18} />} label="AI Watchlist" href="/watchlist" />
           <NavItem icon={<Star size={18} />} label="My Watchlists" href="/my-watchlists" />
+
           <NavItem icon={<MessageSquare size={18} />} label="Prism Chat" href="/" />
           <NavItem icon={<Clock size={18} />} label="History" href="/history" />
         </nav>
@@ -48,4 +49,6 @@ function NavItem({ icon, label, href }: { icon: React.ReactNode; label: string; 
       <div className="absolute inset-0 bg-gradient-to-r from-glowBlue/0 via-glowBlue/5 to-glowBlue/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
     </a>
   );
-} 
+}
+
+ 

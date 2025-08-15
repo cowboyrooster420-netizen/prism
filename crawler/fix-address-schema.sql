@@ -50,3 +50,4 @@ WHERE table_name = 'tokens' AND column_name = 'mint_address';
 SELECT id, name, symbol, mint_address, length(mint_address) as addr_length
 FROM tokens 
 LIMIT 5;
+

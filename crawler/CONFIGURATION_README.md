@@ -440,3 +440,4 @@ The configuration management system provides a robust foundation for managing TA
 - **Scalability**: Environment-specific presets and runtime updates
 
 This system makes the TA Worker production-ready and allows operators to fine-tune performance based on specific requirements and market conditions.
+

@@ -160,3 +160,4 @@ function main(): void {
 if (require.main === module) {
   main();
 }
+

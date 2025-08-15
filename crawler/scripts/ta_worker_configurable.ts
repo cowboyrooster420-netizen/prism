@@ -336,3 +336,4 @@ if (isMainThread) {
 } else {
   runWorker();
 }
+

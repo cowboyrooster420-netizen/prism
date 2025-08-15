@@ -141,3 +141,4 @@ export class AlertManager extends EventEmitter {
     this.emit('alertsCleared');
   }
 }
+

@@ -216,3 +216,4 @@ jest.mock('os', () => ({
     { model: 'Test CPU', speed: 1000, times: { user: 0, nice: 0, sys: 0, idle: 0, irq: 0 } }
   ])
 }));
+

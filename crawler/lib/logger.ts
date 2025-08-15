@@ -114,3 +114,4 @@ export class Logger extends EventEmitter {
     return stats;
   }
 }
+

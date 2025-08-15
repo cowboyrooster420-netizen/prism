@@ -937,3 +937,4 @@ export class AutomatedRemediation extends EventEmitter {
 export function createAutomatedRemediation(config: RemediationConfig): AutomatedRemediation {
   return new AutomatedRemediation(config);
 }
+

@@ -1019,3 +1019,4 @@ export class AdvancedAnalytics extends EventEmitter {
 export function createAdvancedAnalytics(config: AnalyticsConfig): AdvancedAnalytics {
   return new AdvancedAnalytics(config);
 }
+

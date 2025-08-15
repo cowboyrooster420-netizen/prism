@@ -301,3 +301,4 @@ export class ErrorCategorizer {
     return 'MEDIUM'; // Default to medium severity
   }
 }
+

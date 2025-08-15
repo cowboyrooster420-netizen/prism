@@ -204,3 +204,4 @@ export default function AddToWatchlistModal({ isOpen, onClose, token }: AddToWat
   )
 }
 
+

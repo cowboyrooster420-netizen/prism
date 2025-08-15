@@ -451,3 +451,4 @@ if (isMainThread) {
 } else {
   runWorker();
 }
+

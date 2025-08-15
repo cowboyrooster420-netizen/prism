@@ -538,7 +538,7 @@ export class MLQualityPredictor extends EventEmitter {
       return variance;
     });
     
-    const avgVariance = featureVariances.reduce((sum, var) => sum + var, 0) / featureVariances.length;
+    const avgVariance = featureVariances.reduce((sum, variance) => sum + variance, 0) / featureVariances.length;
     confidence += Math.max(0, 0.2 - avgVariance * 0.1);
     
     return Math.max(0, Math.min(1, confidence));
@@ -874,3 +874,4 @@ export class MLQualityPredictor extends EventEmitter {
 export function createMLQualityPredictor(config: MLModelConfig): MLQualityPredictor {
   return new MLQualityPredictor(config);
 }
+

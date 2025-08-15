@@ -8,6 +8,7 @@ export async function upsertToken(token: EnrichedToken): Promise<boolean> {
   try {
     // Prepare the token data for Supabase - only include fields that exist in the database
     const tokenData = {
+      address: token.address,  // Add the address field
       mint_address: token.mint_address,
       name: token.name,
       symbol: token.symbol,
@@ -21,8 +22,16 @@ export async function upsertToken(token: EnrichedToken): Promise<boolean> {
       price: token.price,
       price_change_1h: token.price_change_1h,
       price_change_24h: token.price_change_24h,
+      
+      // Include behavioral metrics if they exist
+      whale_buys_24h: token.whale_buys_24h || 0,
+      new_holders_24h: token.new_holders_24h || 0,
+      volume_spike_ratio: token.volume_spike_ratio || 1.0,
+      token_age_hours: token.token_age_hours || 24,
+      
       created_at: token.created_at,
       updated_at: token.updated_at,
+      source: 'birdeye',  // Add source field for database compatibility
     };
 
     const { error } = await supabase

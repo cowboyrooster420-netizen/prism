@@ -1,5 +1,6 @@
 // Base token interface
 export interface Token {
+  address?: string;  // Add address field for database compatibility
   mint_address: string;
   name?: string;
   symbol?: string;
@@ -21,8 +22,24 @@ export interface Token {
 
 // Enriched token with additional metrics
 export interface EnrichedToken extends Token {
-  aiScore: number;
-  updatedAt: string;
+  aiScore?: number;
+  updatedAt?: string;
+  
+  // Behavioral metrics
+  whale_buys_24h?: number;
+  new_holders_24h?: number;
+  volume_spike_ratio?: number;
+  token_age_hours?: number;
+  transaction_pattern_score?: number;
+  smart_money_score?: number;
+  
+  // Technical analysis metrics
+  rsi14?: number;
+  breakout_high_20?: boolean;
+  near_breakout_high_20?: boolean;
+  cross_ema7_over_ema20?: boolean;
+  cross_ema50_over_ema200?: boolean;
+  
   marketMetrics?: {
     volatility24h: number;
     priceChange1h: number;

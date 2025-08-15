@@ -199,3 +199,4 @@ if (isMainThread) {
 } else {
   runWorker();
 }
+

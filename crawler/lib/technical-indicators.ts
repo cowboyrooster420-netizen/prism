@@ -309,3 +309,4 @@ export function stochastic(
   
   return { k, d };
 }
+

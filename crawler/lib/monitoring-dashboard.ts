@@ -354,3 +354,4 @@ export class MonitoringDashboard {
 export function createMonitoringDashboard(monitoringManager: MonitoringManager): MonitoringDashboard {
   return new MonitoringDashboard(monitoringManager);
 }
+

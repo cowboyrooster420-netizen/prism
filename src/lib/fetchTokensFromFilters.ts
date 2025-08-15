@@ -18,8 +18,11 @@ const validateFilter = (filter: any): filter is Filter => {
 
 // Validate column names to prevent injection
 const validColumns = [
+  // Basic columns
   'name', 'symbol', 'market_cap', 'volume_24h', 
-  'price_change_24h', 'liquidity', 'price', 'tier', 'source'
+  'price_change_24h', 'liquidity', 'price', 'tier', 'source',
+  // Behavioral columns
+  'new_holders_24h', 'whale_buys_24h', 'volume_spike_ratio', 'token_age_hours'
 ];
 
 const isValidColumn = (column: string): boolean => {
@@ -50,27 +53,40 @@ export async function fetchTokensFromFilters(filters: Filter[]) {
         continue;
       }
 
-      if (['eq', 'lt', 'lte', 'gt', 'gte', 'like'].includes(f.operator)) {
-        query = (query as any)[f.operator](f.column, f.value)
+      switch (f.operator) {
+        case 'eq':
+          query = query.eq(f.column, f.value);
+          break;
+        case 'lt':
+          query = query.lt(f.column, f.value);
+          break;
+        case 'lte':
+          query = query.lte(f.column, f.value);
+          break;
+        case 'gt':
+          query = query.gt(f.column, f.value);
+          break;
+        case 'gte':
+          query = query.gte(f.column, f.value);
+          break;
+        case 'like':
+          query = query.ilike(f.column, `%${f.value}%`);
+          break;
+        default:
+          console.warn(`Unsupported operator: ${f.operator}`);
       }
     }
 
-    const { data, error } = await query.limit(500)
+    const { data, error } = await query;
 
     if (error) {
-      console.error('Supabase query error:', error)
-      return []
+      console.error('Error in fetchTokensFromFilters:', error);
+      return [];
     }
 
-    // Validate response data
-    if (!data || !Array.isArray(data)) {
-      console.error('Invalid response from Supabase')
-      return []
-    }
-
-    return data
+    return data || [];
   } catch (error) {
-    console.error('Error in fetchTokensFromFilters:', error)
-    return []
+    console.error('Error in fetchTokensFromFilters:', error);
+    return [];
   }
-} 
+}

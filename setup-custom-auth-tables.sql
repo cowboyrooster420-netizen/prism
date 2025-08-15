@@ -105,3 +105,4 @@ FROM information_schema.columns
 WHERE table_name IN ('users', 'watchlists', 'watchlist_tokens')
 ORDER BY table_name, ordinal_position;
 
+

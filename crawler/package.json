@@ -13,6 +13,12 @@
     "smart": "tsx smart-crawler.ts",
     "jupiter": "tsx jupiter-crawler.ts",
     "ta": "tsx scripts/ta_worker.ts",
+    "ta-elite": "tsx scripts/ta_worker_elite.ts",
+    "ta-runner": "tsx run-ta-worker.ts",
+    "ta-runner-continuous": "tsx run-ta-worker.ts --continuous",
+    "ta-dashboard": "tsx ta-dashboard.ts",
+    "ta-status": "tsx ta-status.ts",
+    "migrate-db": "tsx migrate-database.ts",
     "ta-parallel": "tsx scripts/ta_worker_parallel.ts",
     "ta-modular": "tsx scripts/ta_worker_modular.ts",
     "ta-resilient": "tsx scripts/ta_worker_resilient.ts",
@@ -44,12 +50,20 @@
     "test:errors": "jest --testPathPattern=__tests__/error-handling\\.test\\.ts",
     "test:config": "jest --testPathPattern=__tests__/configuration\\.test\\.ts",
     "test:data-quality": "jest --testPathPattern=__tests__/data-quality\\.test\\.ts",
-    "test:runner": "tsx scripts/run-tests.ts"
+    "test:runner": "tsx scripts/run-tests.ts",
+    "chat-demo": "tsx magical-chat-demo.ts",
+    "chat": "tsx magical-chat-interactive.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
+    "@types/pg": "^8.15.5",
+    "@types/ws": "^8.18.1",
     "dotenv": "^17.2.1",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "openai": "^4.104.0",
+    "pg": "^8.16.3",
+    "redis": "^4.7.1",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@jest/globals": "^30.0.5",

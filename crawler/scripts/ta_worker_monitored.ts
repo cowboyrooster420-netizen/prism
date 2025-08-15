@@ -346,3 +346,4 @@ if (isMainThread) {
     process.exit(1);
   });
 }
+

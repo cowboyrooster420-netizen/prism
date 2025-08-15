@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import TokenCard from './TokenCard'
 import TokenDetailModal from './TokenDetailModal'
+import { useBehavioralData } from '../contexts/BehavioralDataContext'
 
 interface Token {
   id: string | number
@@ -41,6 +42,9 @@ export default function PrismPrompt() {
   const [error, setError] = useState<string | null>(null)
   const [selectedToken, setSelectedToken] = useState<Token | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  
+  // Get behavioral data context
+  const { data: behavioralData, getTokenBehavioralInsights } = useBehavioralData()
 
   const validateInput = (input: string): string | null => {
     if (!input.trim()) {
@@ -59,6 +63,28 @@ export default function PrismPrompt() {
     return null;
   };
 
+  // Enhance user prompt with behavioral data context
+  const enhancePromptWithBehavioralData = (userPrompt: string, behavioralData: any) => {
+    let enhancedPrompt = userPrompt
+    
+    // Add behavioral context if available
+    if (behavioralData.whaleActivity.length > 0) {
+      enhancedPrompt += `\n\nContext: There is recent whale activity with ${behavioralData.whaleActivity.length} tokens showing significant whale buys and new holder growth.`
+    }
+    
+    if (behavioralData.newLaunches.length > 0) {
+      enhancedPrompt += `\n\nContext: There are ${behavioralData.newLaunches.length} new token launches in the last 24 hours with varying performance.`
+    }
+    
+    if (behavioralData.volumeSpikes.length > 0) {
+      enhancedPrompt += `\n\nContext: There are ${behavioralData.volumeSpikes.length} tokens experiencing volume spikes, indicating potential momentum.`
+    }
+    
+    enhancedPrompt += `\n\nPlease consider this behavioral context when analyzing tokens and provide insights about whale activity, new launches, and volume patterns.`
+    
+    return enhancedPrompt
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -76,12 +102,24 @@ export default function PrismPrompt() {
     setTokens([])
 
     try {
+      // Enhance prompt with behavioral context
+      const enhancedPrompt = enhancePromptWithBehavioralData(input.trim(), behavioralData)
+      
       const response = await fetch('/api/ai-prompt', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: input.trim() }),
+        body: JSON.stringify({ 
+          prompt: enhancedPrompt,
+          originalPrompt: input.trim(),
+          behavioralContext: {
+            hasWhaleActivity: behavioralData.whaleActivity.length > 0,
+            hasNewLaunches: behavioralData.newLaunches.length > 0,
+            hasVolumeSpikes: behavioralData.volumeSpikes.length > 0,
+            lastUpdated: behavioralData.lastUpdated
+          }
+        }),
       })
 
       if (!response.ok) {
@@ -152,7 +190,7 @@ export default function PrismPrompt() {
                   type="text"
                   value={input}
                   onChange={handleInputChange}
-                  placeholder="Try: tokens with volume_24h > 100k and market_cap < 5m"
+                  placeholder="Try: whale activity in new launches, volume spikes under $10M, or fresh pump.fun tokens"
                   disabled={isLoading}
                   className="w-full text-white bg-transparent placeholder-gray-500 text-lg outline-none font-inter font-medium leading-relaxed border-b border-[#2a2a2e]/50 focus:border-glowBlue/50 transition-colors duration-300 pb-3 disabled:opacity-50"
                 />
@@ -196,6 +234,32 @@ export default function PrismPrompt() {
                       <div className="text-sm text-gray-400 mb-4">
                         Found {tokens.length} tokens matching your criteria:
                       </div>
+                      
+                      {/* Behavioral Analysis Summary */}
+                      <div className="bg-gradient-to-r from-[#1a1a1f]/50 to-[#0d0d0f]/50 rounded-lg border border-[#2a2a2e]/30 p-4">
+                        <div className="text-sm text-gray-400 mb-3 font-medium">🧠 AI Analysis with Behavioral Context</div>
+                        <div className="text-xs text-gray-500 leading-relaxed">
+                          {behavioralData.whaleActivity.length > 0 && (
+                            <div className="mb-2">
+                              🐋 <span className="text-blue-400">Whale Activity Detected:</span> {behavioralData.whaleActivity.length} tokens showing significant whale buys and new holder growth
+                            </div>
+                          )}
+                          {behavioralData.newLaunches.length > 0 && (
+                            <div className="mb-2">
+                              🚀 <span className="text-green-400">New Launches:</span> {behavioralData.newLaunches.length} tokens launched in the last 24 hours
+                            </div>
+                          )}
+                          {behavioralData.volumeSpikes.length > 0 && (
+                            <div className="mb-2">
+                              📈 <span className="text-purple-400">Volume Spikes:</span> {behavioralData.volumeSpikes.length} tokens experiencing unusual volume increases
+                            </div>
+                          )}
+                          <div className="text-gray-600 mt-2">
+                            💡 <span className="text-yellow-400">AI Insight:</span> Your query was enhanced with behavioral data to provide more intelligent token analysis
+                          </div>
+                        </div>
+                      </div>
+                      
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {tokens.map((token) => (
                           <TokenCard
@@ -209,8 +273,70 @@ export default function PrismPrompt() {
                   )}
 
                   {!isLoading && !error && !input && (
-                    <div className="text-gray-500 text-sm leading-relaxed font-inter">
-                      Ready to analyze Solana tokens and market data. Ask me anything about trending tokens, whale movements, or market insights.
+                    <div className="space-y-4">
+                      <div className="text-gray-500 text-sm leading-relaxed font-inter">
+                        Ready to analyze Solana tokens with behavioral intelligence. Ask me about whale activity, new launches, volume spikes, or complex trading opportunities.
+                      </div>
+                      
+                      {/* Example Queries */}
+                      <div className="bg-gradient-to-r from-[#1a1a1f]/50 to-[#0d0d0f]/50 rounded-lg border border-[#2a2a2e]/30 p-4">
+                        <div className="text-sm text-gray-400 mb-3 font-medium">🧠 Try These Intelligent Queries</div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {[
+                            { emoji: '🐋', text: 'Show me tokens with whale activity', category: 'Whale Analysis' },
+                            { emoji: '🚀', text: 'New pump.fun launches with early signals', category: 'New Launches' },
+                            { emoji: '📈', text: 'Volume spikes in small cap tokens', category: 'Volume Analysis' },
+                            { emoji: '🎯', text: 'Alpha opportunities with behavioral signals', category: 'Complex Analysis' },
+                            { emoji: '💰', text: 'Micro cap gems under $1M with activity', category: 'Market Cap' },
+                            { emoji: '🔥', text: 'Fresh launches with growing holders', category: 'Growth Analysis' }
+                          ].map((example, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setInput(example.text)}
+                              className="text-left p-3 rounded-lg border border-[#2a2a2e]/20 hover:border-[#3a3a3e]/40 hover:bg-[#1a1a1f]/30 transition-all duration-200 group"
+                            >
+                              <div className="flex items-start gap-2">
+                                <span className="text-lg">{example.emoji}</span>
+                                <div>
+                                  <div className="text-sm text-gray-300 group-hover:text-white transition-colors">
+                                    &ldquo;{example.text}&rdquo;
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    {example.category}
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* Behavioral Data Overview */}
+                      <div className="bg-gradient-to-r from-[#1a1a1f]/50 to-[#0d0d0f]/50 rounded-lg border border-[#2a2a2e]/30 p-4">
+                        <div className="text-sm text-gray-400 mb-3 font-medium">🪄 Live Behavioral Insights</div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                            <span className="text-gray-500">Whale Activity:</span>
+                            <span className="text-blue-400 font-medium">{behavioralData.whaleActivity.length} tokens</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                            <span className="text-gray-500">New Launches:</span>
+                            <span className="text-green-400 font-medium">{behavioralData.newLaunches.length} tokens</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                            <span className="text-gray-500">Volume Spikes:</span>
+                            <span className="text-purple-400 font-medium">{behavioralData.volumeSpikes.length} tokens</span>
+                          </div>
+                        </div>
+                        {behavioralData.lastUpdated && (
+                          <div className="text-xs text-gray-600 mt-2">
+                            Last updated: {new Date(behavioralData.lastUpdated).toLocaleTimeString()}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

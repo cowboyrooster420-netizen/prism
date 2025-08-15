@@ -101,3 +101,4 @@ if (sequentialResult.success && parallelResult.success) {
 }
 
 console.log('\n🏁 Benchmark completed!');
+
