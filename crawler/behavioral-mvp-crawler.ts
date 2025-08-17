@@ -260,18 +260,6 @@ process.on('SIGTERM', () => {
 });
 
 // Start the crawler if this file is run directly
-if (require.main === module) {
-  crawler = new BehavioralMVPCrawler();
-  
-  console.log('🚀 Starting Behavioral MVP Crawler...');
-  console.log('Features:');
-  console.log('✅ Jupiter token discovery (1,400+ verified tokens)');
-  console.log('✅ BirdEye market data integration');
-  console.log('✅ Behavioral intelligence (volume spikes, whale activity, holder growth)');
-  console.log('✅ Cost-optimized API usage');
-  console.log('✅ Database integration with behavioral schema\n');
-  
-  crawler.startScheduledCrawler();
-}
+// Note: Disabled due to ES module issues, use run-behavioral-crawler.ts instead
 
 export { BehavioralMVPCrawler };

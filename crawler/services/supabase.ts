@@ -8,7 +8,7 @@ export async function upsertToken(token: EnrichedToken): Promise<boolean> {
   try {
     // Prepare the token data for Supabase - only include fields that exist in the database
     const tokenData = {
-      address: token.address,  // Add the address field
+      address: token.address || token.mint_address,  // Use address or fall back to mint_address
       mint_address: token.mint_address,
       name: token.name,
       symbol: token.symbol,
@@ -29,9 +29,7 @@ export async function upsertToken(token: EnrichedToken): Promise<boolean> {
       volume_spike_ratio: token.volume_spike_ratio || 1.0,
       token_age_hours: token.token_age_hours || 24,
       
-      created_at: token.created_at,
-      updated_at: token.updated_at,
-      source: 'birdeye',  // Add source field for database compatibility
+      source: 'behavioral-crawler',  // Add source field for database compatibility
     };
 
     const { error } = await supabase

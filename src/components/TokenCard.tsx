@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import AddToWatchlistModal from './AddToWatchlistModal'
 import { analyzeTokenReasons, getColorClasses, type TokenWithBehavioral } from '../lib/tokenReasonAnalyzer'
+import { calculatePrismScore, getPrismScoreBadgeColor } from '../lib/prismScore'
 
 interface TokenCardProps {
   token: {
@@ -47,6 +48,16 @@ export default function TokenCard({ token, onClick }: TokenCardProps) {
     } catch (error) {
       console.warn('Token reason analysis failed:', error);
       return [];
+    }
+  })();
+  
+  // Calculate Prism Score (with error handling)
+  const prismScore = (() => {
+    try {
+      return typeof window !== 'undefined' ? calculatePrismScore(token) : { score: 0, rating: 'Weak' as const, confidence: 'Low' as const, primarySignal: 'Calculating...', color: 'text-gray-400' };
+    } catch (error) {
+      console.warn('Prism score calculation failed:', error);
+      return { score: 0, rating: 'Weak' as const, confidence: 'Low' as const, primarySignal: 'Unable to calculate', color: 'text-gray-400' };
     }
   })();
   
@@ -110,7 +121,7 @@ export default function TokenCard({ token, onClick }: TokenCardProps) {
         <div className="absolute inset-0 bg-gradient-to-br from-glowBlue/5 via-transparent to-glowPurple/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[inherit]" />
         
         <div className="relative z-10">
-          {/* Header with token name and price change */}
+          {/* Header with token name, price change, and Prism Score */}
           <div className="flex justify-between items-start mb-4">
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-bold text-white tracking-tight mb-1 group-hover:text-glowBlue transition-colors duration-300 truncate">
@@ -162,10 +173,10 @@ export default function TokenCard({ token, onClick }: TokenCardProps) {
             Updated: {getTimeAgo(token.updated_at)}
           </div>
 
-          {/* Smart Insights - Why this token is interesting */}
+          {/* Token Insights - Why this token is interesting */}
           {tokenReasons && tokenReasons.length > 0 && (
             <div className="bg-gradient-to-r from-[#1a1a1f]/40 to-[#0d0d0f]/40 rounded-lg border border-[#2a2a2e]/20 p-3 mb-4">
-              <div className="text-xs text-gray-400 mb-2 font-medium">Prism Insight</div>
+              <div className="text-xs text-gray-400 mb-2 font-medium">Token Insights</div>
               <div className="space-y-1 text-xs">
                 {tokenReasons.map((reason, index) => {
                   const colorClasses = getColorClasses(reason.color);
@@ -176,6 +187,16 @@ export default function TokenCard({ token, onClick }: TokenCardProps) {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Prism Score */}
+          {prismScore.score > 0 && (
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-xs text-gray-400 font-medium">Prism Score</div>
+              <div className={`px-2 py-1 rounded-md border text-xs font-bold ${getPrismScoreBadgeColor(prismScore.score)}`}>
+                {prismScore.score}
               </div>
             </div>
           )}

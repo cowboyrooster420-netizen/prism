@@ -35,15 +35,21 @@ async function runBirdEyeMarketsCrawler() {
     
     console.log(`📊 Processing ${marketsData.length} market tokens...`);
     
-    // Transform data for Supabase
-    const tokensForUpsert = marketsData.map(token => ({
-      mint_address: token.mint_address,
-      symbol: token.symbol,
-      liquidity: token.liquidity,
-      price: token.token_price || token.price_usd,
-      volume_24h: token.volume_24h || token.volume_24h_quote,
-      updated_at: token.updated_at
-    }));
+    // Transform data for Supabase - filter out invalid tokens
+    const tokensForUpsert = marketsData
+      .filter(token => token.symbol && token.mint_address) // Only tokens with valid symbol and address
+      .map(token => ({
+        mint_address: token.mint_address,
+        address: token.mint_address,
+        symbol: token.symbol.trim().replace(/[^\w]/g, ''), // Clean symbol - alphanumeric only
+        name: (token.name || token.symbol || 'Unknown').trim().substring(0, 50), // Limit name length
+        liquidity: Number(token.liquidity) || 0,
+        price: Number(token.token_price || token.price_usd) || 0,
+        volume_24h: Number(token.volume_24h || token.volume_24h_quote) || 0,
+        market_cap: Number(token.market_cap) || 0,
+        source: 'birdeye-markets'
+      }))
+      .filter(token => token.symbol.length > 0 && token.symbol.length <= 20); // Valid symbol length
     
     // Upsert to Supabase
     await upsertToSupabase(tokensForUpsert);

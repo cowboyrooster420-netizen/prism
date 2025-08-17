@@ -474,17 +474,39 @@ function computeEliteFeatures(candles: Candle[], token_id: string, timeframe: st
   return out;
 }
 
+async function getAllTokenIds() {
+  const { data, error } = await supabase
+    .from('tokens')
+    .select('mint_address')
+    .limit(1000);
+  
+  if (error) {
+    console.error('Error fetching tokens:', error);
+    return [];
+  }
+  
+  return data?.map(t => t.mint_address) || [];
+}
+
 async function runOnce() {
+  let tokensToProcess = TOKEN_IDS;
+  
   if (TOKEN_IDS.length === 0) {
-    console.error('No TOKEN_IDS provided. Set TA_TOKEN_IDS env var.');
+    console.log('🔍 No specific TOKEN_IDS provided. Fetching all tokens from database...');
+    tokensToProcess = await getAllTokenIds();
+  }
+  
+  if (tokensToProcess.length === 0) {
+    console.error('No tokens found to process.');
     return;
   }
 
   console.log('🚀 Starting ELITE TA Worker - Phase 1 Features');
   console.log('📊 New Features: VWAP, Support/Resistance, Smart Money Flow, Trend Alignment');
+  console.log(`🎯 Processing ${tokensToProcess.length} tokens`);
 
   for (const timeframe of TIMEFRAMES) {
-    for (const token of TOKEN_IDS) {
+    for (const token of tokensToProcess) {
       try {
         const candles = await fetchCandlesFromDB(token, timeframe, 300);
         const rows = computeEliteFeatures(candles, token, timeframe);
