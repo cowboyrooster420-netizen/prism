@@ -39,12 +39,18 @@
 ✅ **Helius Analyzer** - On-chain metrics  
 ✅ **Volume Prioritizer** - Token filtering  
 ✅ **Launchpad Monitor** - New launches  
+✅ **Technical Analysis System** - Elite TA features fully functional  
 
 ## 🏎️ **Ferrari Components (Keep But Simplify)**
 - **Unified Crawler Manager** → Simplify orchestration
 - **Query Router** → Only use for AI chat (not crawlers)
 - **Data Fusion Engine** → Disable until needed
 - **Complex Caching** → Simple caching only
+
+## 📈 **Working Advanced Features (Keep As-Is)**
+- **Technical Analysis Pipeline** → Database → API → UI (fully functional)
+- **Edge Pipeline Component** → TA data display and scoring
+- **Elite TA Endpoint** → Comprehensive technical indicators
 
 ## 🎯 **Target Architecture**
 ```
