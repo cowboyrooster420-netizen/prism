@@ -6,9 +6,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Import services that read from database (not crawlers)
-import SmartTokenCrawler from '../../crawler/services/smart-token-crawler';
-import AIWatchlistAnalyzer from '../../crawler/services/ai-watchlist-analyzer';
-import TechnicalAnalysisService from './technical-analysis-service';
+// Legacy services moved to backup/legacy-services/
 
 // Types for unified data structures
 export interface UnifiedTokenData {
@@ -86,22 +84,17 @@ export interface DatabaseDataResponse {
 
 export class DatabaseDataManager {
   private supabase: any;
-  private smartTokenCrawler?: SmartTokenCrawler;
-  private aiWatchlistAnalyzer?: AIWatchlistAnalyzer;
-  private technicalAnalysisService?: TechnicalAnalysisService;
   
   // Cache for frequently requested data
   private cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
   
-  // Service availability tracking
+  // Service availability tracking - only working services
   private serviceStatus = {
     volumePrioritizer: true,
     launchpadMonitor: true,
     heliusAnalyzer: true,
-    jupiterCrawler: true,
-    smartTokenCrawler: true,
-    aiWatchlistAnalyzer: true,
-    technicalAnalysisService: true
+    jupiterCrawler: true
+    // Legacy services moved to backup
   };
 
   constructor(config: {
@@ -153,10 +146,7 @@ export class DatabaseDataManager {
     }
     */
     
-    // Set services as unavailable for now
-    this.serviceStatus.smartTokenCrawler = false;
-    this.serviceStatus.aiWatchlistAnalyzer = false;
-    this.serviceStatus.technicalAnalysisService = false;
+    // Legacy services moved to backup
 
     console.log('🚀 Database Data Manager initialized');
     console.log('📊 Service Status:', this.serviceStatus);
@@ -286,7 +276,7 @@ export class DatabaseDataManager {
 
         // Add technical analysis if available
         if (request.type === 'technical' || request.type === 'all') {
-          enriched.technicalAnalysis = await this.getTechnicalAnalysis(token.address);
+          // Technical analysis moved to Edge Pipeline component
         }
 
       } catch (error) {
@@ -367,28 +357,7 @@ export class DatabaseDataManager {
     } : null;
   }
 
-  /**
-   * Get technical analysis for a specific token
-   */
-  private async getTechnicalAnalysis(address: string): Promise<any> {
-    if (!this.technicalAnalysisService) return null;
-
-    try {
-      const analysis = await this.technicalAnalysisService.getTokenAnalysis(address);
-      return analysis ? {
-        technical_score: analysis.technical_score,
-        trend: analysis.trend,
-        momentum: analysis.momentum,
-        volatility: analysis.volatility,
-        active_signals: analysis.active_signals,
-        support_levels: analysis.support_levels,
-        resistance_levels: analysis.resistance_levels
-      } : null;
-    } catch (error) {
-      console.warn(`Error getting TA for ${address}:`, error);
-      return null;
-    }
-  }
+  // Technical analysis moved to Edge Pipeline component
 
   /**
    * Transform database token to unified format
@@ -521,9 +490,7 @@ export class DatabaseDataManager {
     }
 
     // Test other services
-    checks.smartTokenCrawler = this.serviceStatus.smartTokenCrawler;
-    checks.aiWatchlistAnalyzer = this.serviceStatus.aiWatchlistAnalyzer;
-    checks.technicalAnalysisService = this.serviceStatus.technicalAnalysisService;
+    // Legacy services moved to backup
     
     return checks;
   }
