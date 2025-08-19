@@ -6,6 +6,7 @@
 import { HELIUS_API_KEY } from '../config';
 import { sleep } from '../utils';
 import { HeliusRateLimiter } from './rate-limiter';
+import { EnhancedErrorHandler, ErrorContext } from './enhanced-error-handler';
 
 interface WhaleTransaction {
   signature: string;
@@ -52,41 +53,356 @@ interface BehavioralMetrics {
 export class HeliusBehavioralAnalyzer {
   private readonly WHALE_THRESHOLD_USD = 10000; // $10k+ transactions are whale activity
   private readonly LARGE_WHALE_THRESHOLD_USD = 50000; // $50k+ transactions are large whale activity
-  private readonly MAX_TRANSACTIONS_TO_ANALYZE = 1000;
+  private readonly MAX_TRANSACTIONS_TO_ANALYZE = 100; // Helius API max limit
   private readonly SMART_MONEY_ADDRESSES = new Set([
     // Known smart money addresses - these can be expanded
     'GDfnEsia2WLAW5t8yx2X5j2mkfA74i5kwGdDuZHt7XmG', // Example smart money wallet
     'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL', // Another example
   ]);
   private readonly rateLimiter: HeliusRateLimiter;
+  private readonly errorHandler: EnhancedErrorHandler;
 
   constructor() {
     this.rateLimiter = new HeliusRateLimiter();
-    console.log('🧠 Helius Behavioral Analyzer initialized with rate limiting');
+    this.errorHandler = new EnhancedErrorHandler();
+    console.log('🧠 Helius Behavioral Analyzer initialized with enhanced error handling and rate limiting');
   }
 
   /**
-   * Main function to analyze behavioral metrics for a token
-   * Uses BirdEye market data to derive realistic behavioral metrics
+   * Get error handling and circuit breaker status for monitoring
    */
-  async analyzeBehavioralMetrics(tokenAddress: string, priceUsd?: number, marketData?: any): Promise<BehavioralMetrics> {
-    console.log(`🔍 Analyzing behavioral metrics for ${tokenAddress} using market data...`);
+  getSystemStatus() {
+    return {
+      circuitBreakers: this.errorHandler.getCircuitBreakerStatus(),
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  /**
+   * Main entry point for behavioral analysis
+   * REAL DATA FIRST: Uses actual Helius transaction analysis, falls back to mathematical estimates
+   */
+  async analyzeBehavioralMetrics(tokenAddress: string, priceUsd?: number, marketData?: any): Promise<BehavioralMetrics & { dataConfidence: number; analysisSource: string; realDataPercentage: number }> {
+    console.log(`🔍 Starting comprehensive behavioral analysis for ${tokenAddress}...`);
+    
+    const analysisStart = Date.now();
+    let realDataMetrics: Partial<BehavioralMetrics> = {};
+    let dataConfidence = 0;
+    let analysisSource = '';
+    let realDataPercentage = 0;
+    
+    // Use enhanced error handling for the main analysis operation
+    const context: ErrorContext = {
+      operation: 'behavioral-analysis',
+      tokenAddress,
+      attempt: 1,
+      maxAttempts: 2, // Conservative for main analysis
+      timestamp: new Date()
+    };
+
+    const analysisResult = await this.errorHandler.executeWithRetry(async () => {
+      // STEP 1: Attempt comprehensive real analysis using Helius
+      console.log(`📡 Attempting real on-chain analysis for ${tokenAddress}...`);
+      const realAnalysisResult = await this.performComprehensiveRealAnalysis(tokenAddress, priceUsd);
+      
+      realDataMetrics = realAnalysisResult.metrics;
+      dataConfidence = realAnalysisResult.confidence;
+      analysisSource = realAnalysisResult.source;
+      realDataPercentage = realAnalysisResult.realDataPercentage;
+      
+      // STEP 2: Check if we have sufficient real data
+      const metricsCount = Object.keys(realDataMetrics).length;
+      const totalMetrics = 6; // Total expected metrics
+      const realDataCoverage = metricsCount / totalMetrics;
+      
+      console.log(`📊 Real analysis coverage: ${(realDataCoverage * 100).toFixed(1)}% (${metricsCount}/${totalMetrics} metrics)`);
+      
+      // STEP 3: If real data is insufficient, hybridize with mathematical estimates
+      let finalMetrics: BehavioralMetrics;
+      
+      if (realDataCoverage >= 0.7) {
+        // Sufficient real data (70%+)
+        finalMetrics = this.fillMissingMetricsFromMath(realDataMetrics, marketData, priceUsd);
+        analysisSource = realDataCoverage === 1.0 ? 'real_only' : 'real_primary';
+        console.log(`✅ High-quality real analysis complete with ${(realDataCoverage * 100).toFixed(1)}% real data`);
+      } else if (realDataCoverage >= 0.3) {
+        // Partial real data (30-70%)
+        finalMetrics = this.hybridizeRealAndMathematical(realDataMetrics, marketData, tokenAddress, priceUsd);
+        analysisSource = 'hybrid';
+        dataConfidence = Math.min(dataConfidence, 0.6);
+        console.log(`⚖️ Hybrid analysis complete with ${(realDataCoverage * 100).toFixed(1)}% real data`);
+      } else {
+        // Insufficient real data (<30%)
+        console.log(`⚠️ Insufficient real data (${(realDataCoverage * 100).toFixed(1)}%), falling back to mathematical estimates`);
+        finalMetrics = marketData 
+          ? this.deriveBehavioralMetricsFromMarketData(marketData, tokenAddress)
+          : this.getEnhancedDefaultMetrics(priceUsd);
+        analysisSource = 'mathematical_fallback';
+        dataConfidence = 0.3;
+        realDataPercentage = realDataCoverage * 100;
+      }
+      
+      const analysisTime = Date.now() - analysisStart;
+      console.log(`🎯 Behavioral analysis complete in ${analysisTime}ms - Source: ${analysisSource}, Confidence: ${(dataConfidence * 100).toFixed(1)}%`);
+      
+      return {
+        ...finalMetrics,
+        dataConfidence,
+        analysisSource,
+        realDataPercentage
+      };
+    }, context);
+
+    // Handle the result from enhanced error handling
+    if (analysisResult.success) {
+      return analysisResult.result!;
+    } else {
+      // Enhanced error fallback with detailed error information
+      console.error(`🚨 Behavioral analysis failed permanently for ${tokenAddress}:`, {
+        errorType: analysisResult.error?.type,
+        severity: analysisResult.error?.severity,
+        message: analysisResult.error?.message
+      });
+      
+      // Emergency fallback to mathematical estimates
+      const fallbackMetrics = marketData 
+        ? this.deriveBehavioralMetricsFromMarketData(marketData, tokenAddress)
+        : this.getEnhancedDefaultMetrics(priceUsd);
+      
+      return {
+        ...fallbackMetrics,
+        dataConfidence: 0.15, // Lower confidence for error fallback
+        analysisSource: 'error_fallback',
+        realDataPercentage: 0
+      };
+    }
+  }
+
+  /**
+   * Comprehensive real analysis using actual Helius transaction data
+   */
+  private async performComprehensiveRealAnalysis(tokenAddress: string, priceUsd?: number): Promise<{
+    metrics: Partial<BehavioralMetrics>;
+    confidence: number;
+    source: string;
+    realDataPercentage: number;
+    heliusTransactionsAnalyzed: number;
+  }> {
+    console.log(`🔬 Starting comprehensive real analysis for ${tokenAddress}...`);
+    
+    const analysisResults: Partial<BehavioralMetrics> = {};
+    let totalConfidence = 0;
+    let successfulAnalyses = 0;
+    let totalTransactionsAnalyzed = 0;
     
     try {
-      // Use BirdEye market data to derive behavioral metrics
-      if (marketData) {
-        const metrics = this.deriveBehavioralMetricsFromMarketData(marketData, tokenAddress);
-        console.log(`✅ Market-based behavioral analysis complete for ${marketData.symbol}:`, metrics);
-        return metrics;
-      } else {
-        console.log(`⚠️ No market data for ${tokenAddress}, using enhanced defaults`);
-        return this.getEnhancedDefaultMetrics(priceUsd);
+      // 1. Real Whale Activity Analysis
+      try {
+        console.log(`🐋 Analyzing real whale transactions...`);
+        const whaleResult = await this.analyzeWhaleActivity(tokenAddress, priceUsd);
+        if (whaleResult.whaleTransactions.length > 0) {
+          analysisResults.whale_buys_24h = whaleResult.whaleTransactions.filter(t => t.type === 'buy').length;
+          totalTransactionsAnalyzed += whaleResult.whaleTransactions.length;
+          totalConfidence += 0.9; // High confidence for real transaction data
+          successfulAnalyses++;
+          console.log(`✅ Whale analysis: ${analysisResults.whale_buys_24h} whale buys from ${whaleResult.whaleTransactions.length} transactions`);
+        }
+      } catch (error) {
+        console.log(`⚠️ Whale analysis failed:`, error.message);
       }
 
+      // 2. Real Holder Growth Analysis
+      try {
+        console.log(`👥 Analyzing real holder growth...`);
+        const holderResult = await this.analyzeHolderGrowth(tokenAddress);
+        if (holderResult.newHolders24h >= 0) {
+          analysisResults.new_holders_24h = holderResult.newHolders24h;
+          totalConfidence += 0.8; // Good confidence for holder data
+          successfulAnalyses++;
+          console.log(`✅ Holder analysis: ${analysisResults.new_holders_24h} new holders`);
+        }
+      } catch (error) {
+        console.log(`⚠️ Holder analysis failed:`, error.message);
+      }
+
+      // 3. Real Volume Spike Analysis
+      try {
+        console.log(`📊 Analyzing real volume spikes...`);
+        const volumeResult = await this.analyzeVolumeSpikes(tokenAddress);
+        if (volumeResult.volumeSpikeRatio > 0) {
+          analysisResults.volume_spike_ratio = volumeResult.volumeSpikeRatio;
+          totalTransactionsAnalyzed += volumeResult.transactionCount24h;
+          totalConfidence += 0.85; // High confidence for volume analysis
+          successfulAnalyses++;
+          console.log(`✅ Volume analysis: ${analysisResults.volume_spike_ratio}x spike ratio from ${volumeResult.transactionCount24h} transactions`);
+        }
+      } catch (error) {
+        console.log(`⚠️ Volume analysis failed:`, error.message);
+      }
+
+      // 4. Real Transaction Pattern Analysis
+      try {
+        console.log(`🎯 Analyzing real transaction patterns...`);
+        const patternResult = await this.analyzeTransactionPatterns(tokenAddress);
+        if (patternResult.smartMoneyActivity >= 0) {
+          analysisResults.smart_money_score = patternResult.smartMoneyActivity;
+          analysisResults.transaction_pattern_score = this.calculatePatternScore(patternResult);
+          totalConfidence += 0.75; // Good confidence for pattern analysis
+          successfulAnalyses += 2; // Two metrics from one analysis
+          console.log(`✅ Pattern analysis: Smart money score ${analysisResults.smart_money_score}, Pattern score ${analysisResults.transaction_pattern_score}`);
+        }
+      } catch (error) {
+        console.log(`⚠️ Pattern analysis failed:`, error.message);
+      }
+
+      // 5. Real Token Age Analysis (blockchain creation timestamp)
+      try {
+        console.log(`⏰ Analyzing real token age...`);
+        const tokenAge = await this.analyzeRealTokenAge(tokenAddress);
+        if (tokenAge > 0) {
+          analysisResults.token_age_hours = tokenAge;
+          totalConfidence += 0.95; // Very high confidence for blockchain data
+          successfulAnalyses++;
+          console.log(`✅ Token age analysis: ${tokenAge} hours old`);
+        }
+      } catch (error) {
+        console.log(`⚠️ Token age analysis failed:`, error.message);
+      }
+
+      // Calculate overall confidence and real data percentage
+      const averageConfidence = successfulAnalyses > 0 ? totalConfidence / successfulAnalyses : 0;
+      const realDataPercentage = (successfulAnalyses / 6) * 100; // 6 total possible metrics
+      
+      console.log(`📋 Real analysis summary: ${successfulAnalyses}/6 metrics (${realDataPercentage.toFixed(1)}%), ${totalTransactionsAnalyzed} transactions analyzed`);
+      
+      return {
+        metrics: analysisResults,
+        confidence: averageConfidence,
+        source: 'real_helius',
+        realDataPercentage,
+        heliusTransactionsAnalyzed: totalTransactionsAnalyzed
+      };
+
     } catch (error) {
-      console.error(`❌ Error analyzing behavioral metrics for ${tokenAddress}:`, error);
-      return this.getEnhancedDefaultMetrics(priceUsd);
+      console.error(`❌ Comprehensive real analysis failed:`, error);
+      return {
+        metrics: {},
+        confidence: 0,
+        source: 'real_analysis_failed',
+        realDataPercentage: 0,
+        heliusTransactionsAnalyzed: 0
+      };
     }
+  }
+
+  /**
+   * Calculate transaction pattern score from pattern analysis
+   */
+  private calculatePatternScore(pattern: TransactionPattern): number {
+    let score = 0;
+    
+    // Smart money activity (0-40 points)
+    score += Math.min(40, pattern.smartMoneyActivity * 10);
+    
+    // Bot trading penalty (-10 points if detected)
+    if (pattern.botTrading) score -= 10;
+    
+    // Suspicious activity penalty (-20 points if detected)
+    if (pattern.suspiciousActivity) score -= 20;
+    
+    // Liquidity events bonus (0-20 points)
+    score += Math.min(20, pattern.liquidityEvents * 2);
+    
+    // DEX aggregator usage bonus (0-10 points)
+    score += Math.min(10, pattern.dexAggregatorUsage);
+    
+    return Math.max(0, Math.min(100, score));
+  }
+
+  /**
+   * Analyze real token age from blockchain creation timestamp
+   */
+  private async analyzeRealTokenAge(tokenAddress: string): Promise<number> {
+    try {
+      await this.rateLimiter.waitForNextCall();
+      
+      const response = await fetch(`https://api.helius.xyz/v0/token-metadata?api-key=${HELIUS_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mintAccounts: [tokenAddress] })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Helius API error: ${response.status}`);
+      }
+
+      const tokenData = await response.json();
+      
+      if (tokenData && tokenData.length > 0 && tokenData[0].onChainMetadata) {
+        // Try to extract creation timestamp from on-chain metadata
+        const metadata = tokenData[0].onChainMetadata;
+        if (metadata.updateAuthority && metadata.mint) {
+          // Use mint creation as token age - this is real blockchain data
+          const mintTimestamp = metadata.mint.timestamp || metadata.timestamp;
+          if (mintTimestamp) {
+            const ageHours = (Date.now() - new Date(mintTimestamp).getTime()) / (1000 * 60 * 60);
+            return Math.round(ageHours);
+          }
+        }
+      }
+      
+      // If no creation timestamp available, return 0 to indicate unavailable
+      return 0;
+      
+    } catch (error) {
+      console.error('Error analyzing real token age:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Fill missing metrics using mathematical estimates (used when real data is partial)
+   */
+  private fillMissingMetricsFromMath(realMetrics: Partial<BehavioralMetrics>, marketData?: any, priceUsd?: number): BehavioralMetrics {
+    const mathMetrics = marketData 
+      ? this.deriveBehavioralMetricsFromMarketData(marketData, 'unknown')
+      : this.getEnhancedDefaultMetrics(priceUsd);
+    
+    return {
+      new_holders_24h: realMetrics.new_holders_24h ?? mathMetrics.new_holders_24h,
+      whale_buys_24h: realMetrics.whale_buys_24h ?? mathMetrics.whale_buys_24h,
+      volume_spike_ratio: realMetrics.volume_spike_ratio ?? mathMetrics.volume_spike_ratio,
+      token_age_hours: realMetrics.token_age_hours ?? mathMetrics.token_age_hours,
+      transaction_pattern_score: realMetrics.transaction_pattern_score ?? mathMetrics.transaction_pattern_score,
+      smart_money_score: realMetrics.smart_money_score ?? mathMetrics.smart_money_score
+    };
+  }
+
+  /**
+   * Hybridize real and mathematical data (used when real data coverage is 30-70%)
+   */
+  private hybridizeRealAndMathematical(realMetrics: Partial<BehavioralMetrics>, marketData: any, tokenAddress: string, priceUsd?: number): BehavioralMetrics {
+    const mathMetrics = marketData 
+      ? this.deriveBehavioralMetricsFromMarketData(marketData, tokenAddress)
+      : this.getEnhancedDefaultMetrics(priceUsd);
+    
+    // Use real data where available, but blend with mathematical estimates for confidence
+    const hybridMetrics: BehavioralMetrics = {
+      new_holders_24h: realMetrics.new_holders_24h ?? mathMetrics.new_holders_24h,
+      whale_buys_24h: realMetrics.whale_buys_24h ?? mathMetrics.whale_buys_24h,
+      volume_spike_ratio: realMetrics.volume_spike_ratio ?? mathMetrics.volume_spike_ratio,
+      token_age_hours: realMetrics.token_age_hours ?? mathMetrics.token_age_hours,
+      transaction_pattern_score: realMetrics.transaction_pattern_score ?? mathMetrics.transaction_pattern_score,
+      smart_money_score: realMetrics.smart_money_score ?? mathMetrics.smart_money_score
+    };
+    
+    // When we have partial real data, slightly adjust mathematical estimates based on real patterns
+    if (realMetrics.whale_buys_24h !== undefined && realMetrics.whale_buys_24h > mathMetrics.whale_buys_24h) {
+      // If real whale activity is higher than math estimate, boost related metrics
+      hybridMetrics.smart_money_score = Math.min(100, hybridMetrics.smart_money_score * 1.2);
+    }
+    
+    return hybridMetrics;
   }
 
   /**
@@ -400,11 +716,15 @@ export class HeliusBehavioralAnalyzer {
    */
   private async analyzeVolumeSpikes(tokenAddress: string): Promise<VolumeAnalysis> {
     try {
-      // Get transactions for current 24h and previous 24h
-      const [current24h, previous24h] = await Promise.all([
-        this.getRecentTransactions(tokenAddress, 24),
-        this.getRecentTransactions(tokenAddress, 48, 24) // 24-48h ago
-      ]);
+      // Get recent transactions and split by time periods
+      const allTransactions = await this.getRecentTransactions(tokenAddress, 48); // Get 48h worth
+      
+      const now = Math.floor(Date.now() / 1000);
+      const dayAgo = now - (24 * 3600);
+      
+      // Split transactions into current 24h and previous 24h periods
+      const current24h = allTransactions.filter(tx => tx.timestamp >= dayAgo);
+      const previous24h = allTransactions.filter(tx => tx.timestamp < dayAgo);
 
       // Calculate volume metrics
       const currentVolume24h = current24h.reduce((sum, tx) => sum + tx.tokenAmount, 0);
@@ -505,14 +825,25 @@ export class HeliusBehavioralAnalyzer {
     hoursBack: number, 
     hoursOffset: number = 0
   ): Promise<any[]> {
-    try {
+    const context: ErrorContext = {
+      operation: 'fetch-transactions',
+      tokenAddress,
+      apiEndpoint: `helius-transactions-${tokenAddress}`,
+      attempt: 1,
+      maxAttempts: 3,
+      timestamp: new Date()
+    };
+
+    const result = await this.errorHandler.executeWithRetry(async () => {
       const now = Math.floor(Date.now() / 1000);
       const startTime = now - ((hoursBack + hoursOffset) * 3600);
       const endTime = hoursOffset > 0 ? now - (hoursOffset * 3600) : now;
 
       await this.rateLimiter.waitForNextCall();
+      
+      // Fetch transactions using proper Helius API parameters
       const response = await fetch(
-        `https://api.helius.xyz/v0/addresses/${tokenAddress}/transactions?api-key=${HELIUS_API_KEY}&limit=${this.MAX_TRANSACTIONS_TO_ANALYZE}`,
+        `https://api.helius.xyz/v0/addresses/${tokenAddress}/transactions?api-key=${HELIUS_API_KEY}&limit=${this.MAX_TRANSACTIONS_TO_ANALYZE}&type=TRANSFER`,
         {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
@@ -523,24 +854,32 @@ export class HeliusBehavioralAnalyzer {
         if (response.status === 429) {
           this.rateLimiter.recordFailure();
         }
-        throw new Error(`Helius API error: ${response.status}`);
+        const errorText = await response.text();
+        const error = new Error(`Helius API error: ${response.status} - ${errorText}`);
+        (error as any).status = response.status; // Attach status for error analysis
+        throw error;
       }
       
       this.rateLimiter.recordSuccess();
 
       const data = await response.json();
       
-      // Filter transactions within time range and parse token transfers
+      // Client-side filtering by timestamp (since API doesn't support direct time filtering)
       const filteredTransactions = (data || [])
         .filter((tx: any) => tx.timestamp >= startTime && tx.timestamp <= endTime)
         .map((tx: any) => this.parseTransactionData(tx, tokenAddress))
         .filter((tx: any) => tx !== null);
 
-      await this.rateLimiter.waitForNextCall();
       return filteredTransactions;
+    }, context);
 
-    } catch (error) {
-      console.error(`Error fetching transactions for ${tokenAddress}:`, error);
+    if (result.success) {
+      return result.result!;
+    } else {
+      console.error(`🚨 Failed to fetch transactions for ${tokenAddress} after all retries:`, {
+        errorType: result.error?.type,
+        severity: result.error?.severity
+      });
       return [];
     }
   }
@@ -662,7 +1001,7 @@ export class HeliusBehavioralAnalyzer {
       const relevantTransfer = tokenTransfers.find((transfer: any) => 
         transfer.mint === tokenAddress
       );
-      return relevantTransfer ? Math.abs(relevantTransfer.amount || 0) : 0;
+      return relevantTransfer ? Math.abs(relevantTransfer.tokenAmount || 0) : 0;
     } catch {
       return 0;
     }
